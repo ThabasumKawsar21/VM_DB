@@ -1,0 +1,26 @@
+CREATE TABLE [dbo].[ClientRequestDetails] (
+    [ClientRequestDetailID] INT           IDENTITY (1, 1) NOT NULL,
+    [RequestID]             INT           NULL,
+    [VisitorID]             INT           NULL,
+    [ParentRefernceID]      INT           NULL,
+    [VisitorName]           VARCHAR (100) NULL,
+    [VcardNumber]           VARCHAR (10)  NULL,
+    [AccessCardNumber]      INT           NULL,
+    [NotificationToHost]    BIT           NULL,
+    [DispatchedToHost]      BIT           NULL,
+    [CollectedBy]           INT           NULL,
+    [Dispatchedby]          INT           NULL,
+    [Dispatchedtime]        DATETIME      NULL,
+    [NotifiedTime]          DATETIME      NULL,
+    [Notifiedby]            INT           NULL,
+    [RemainderPassCollect]  INT           NULL,
+    [RemainderPassReturn]   INT           NULL,
+    [ReissueStatus]         VARCHAR (50)  NULL,
+    [ReportedFacility]      VARCHAR (50)  NULL,
+    [ReportedOn]            DATETIME      NULL,
+    [ReissuedFacility]      VARCHAR (50)  NULL,
+    [ReportedBy]            INT           NULL,
+    [DispatchedFacility]    VARCHAR (50)  NULL,
+    CONSTRAINT [PK_ClientRequestDetails] PRIMARY KEY CLUSTERED ([ClientRequestDetailID] ASC)
+);
+
