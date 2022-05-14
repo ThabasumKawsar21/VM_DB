@@ -1,0 +1,160 @@
+CREATE PROCEDURE [dbo].[ViewLogBySecurityBasedLocationId_Clients](
+       @AssociateID Varchar(11) =null,
+       @SearchValue Varchar(200)=null,
+       @ReqStatus Varchar(50)=null,
+       @FromDate DATETIME=null,
+       @ToDate DATETIME=null
+       )
+AS
+BEGIN
+SET NOCOUNT ON 
+BEGIN TRY
+       DECLARE @ErrorMessage VARCHAR(8000);
+       DECLARE @ErrorSeverity INT;
+       DECLARE @ErrorState INT;
+       DECLARE @NumberRecords int, @RowCount int
+       DECLARE @Word VARCHAR(100)=@SearchValue
+       Declare @LocationId Int
+       DECLARE @code varchar(100)
+       DECLARE @checkdate DATETIME
+
+       SELECT @LocationId=RM.LocationId,
+              @code=LM.CountryCityFacility
+       FROM [vw_rolemapping_restrict] RM WITH (NOLOCK)
+              Inner Join TblLocationMaster LM WITH (NOLOCK) 
+              ON RM.LocationId=LM.LocationId
+       WHERE UserID = @AssociateID
+              
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED
+
+BEGIN TRANSACTION    
+              SET @checkdate = @ToDate
+              IF (@ReqStatus = 'YET TO ARRIVE' OR @ReqStatus = 'Select Status')
+              BEGIN
+                           SELECT 
+                           Vd.VisitDetailsID as DetailsID,1 as Cnt,Vr.VisitorID,Vr.RequestID,Vd.Date
+                           ,Vd.VisitDetailsID ,RequestStatus,FirstName as Name,Company,(SELECT VALUE FROM dbo.fn_UDF_SplitCharacter(Vm.MobileNo,'-') WHERE  idx=1)AS MobileNo
+                           ,FromDate,ToDate,Designation,Vm.Country as NativeCountry,ISNULL(Vm.EmailID,'') as EmailID
+                           ,Replace(Purpose,'Select Purpose','') as Purpose,Replace(LM.LocationCity,'Select','') as VisitingCity
+                           ,HostID as Host,FromTime as inTime,ToTime as ExpectedOutTime,VD.BadgeIssuedDate as ActualInTime,Vd.ActualOutTime
+                     ,Vd.BadgeNo,VisitorReferenceNo,VR.ParentReferenceId,VR.HostAssociateID,dbo.fn_UDF_InitialCaps(Vd.BadgeStatus) as BadgeStatus
+                           ,LM.LocationName as Facility,Vr.Comments,Vr.HostDepartment,Vr.Offset,        
+                            null AS FrstVisitingLoc  ,
+                         (Select [dbo].[VMS_fnGenerateBadgeStatusForClient](vr.ParentReferenceId,'YET TO ARRIVE')) AS RecBadgeStatus
+                           FROM                 
+                                  VisitDetails Vd WITH (NOLOCK) 
+                                  JOIN VisitorRequest  Vr WITH (NOLOCK) ON Vd.RequestID = Vr.RequestID
+                                  JOIN VisitorMaster Vm  WITH (NOLOCK) ON Vr.VisitorID= Vm.VisitorID
+                                  Join TblLocationMaster LM WITH (NOLOCK) On LM.LocationId=Vr.LocationId 
+                                                                     or LM.CountryCityFacility=VR.facility                                         
+                                  WHERE (
+                                         select top 1 LM.LocationId 
+                                         from VisitorRequest Req
+                                         inner join TblLocationMaster LM with (nolock)
+                                         on LM.LocationId=Req.LocationId or LM.CountryCityFacility=Req.facility                                                
+                                         where parentreferenceid=VR.ParentReferenceId 
+                                         order by fromdate,fromtime 
+                                  ) = @LocationId
+                                  and Vd.[Date]>= @FromDate AND Vd.[Date]<=@checkdate   
+                                         AND Vr.[Status] in ('Submitted','updated')
+                                         AND (vr.LocationId = @LocationId or VR.Facility=@code)                            
+                                         AND (vd.BadgeStatus IS NULL or vd.Badgestatus in ('Updated  VCard','Host notified','VCard Partially Updated'))                                         
+                                         AND (vm.FirstName like '%'+@Word+'%' 
+                                                              or vm.LastName like '%'+@Word+'%'
+                                                              or vr.HostID like '%'+@Word+'%'
+                                                              or vm.Company like '%'+@Word+'%'
+                                                              or vd.BadgeNo like '%'+@Word+'%') 
+                                         and (vr.ExternalRequestCameFrom is null or vr.ExternalRequestCameFrom in ('ClientVisit'))
+                                         and VR.purpose='Client'
+                         ORDER BY 
+                           ParentReferenceId desc,
+                           FromDate Desc,
+                           inTime Desc                              
+              END
+              ELSE IF @ReqStatus = 'IN'
+              BEGIN
+                           SELECT 
+                           Vd.VisitDetailsID as DetailsID,1 as Cnt,Vr.VisitorID,Vr.RequestID,Vd.date,Vd.VisitDetailsID as VisitDetailsID
+                           ,RequestStatus,FirstName as Name,Company,ToDate,FromDate,Designation,Vm.Country as NativeCountry,
+                           (SELECT VALUE FROM dbo.fn_UDF_SplitCharacter(Vm.MobileNo,'-') WHERE  idx=1) AS MobileNo
+                           ,ISNULL(Vm.EmailID,'') as EmailID,Replace(Purpose,'Select Purpose','') as Purpose
+                           ,Replace(LM.LocationCity,'Select','') as VisitingCity,HostID as Host,FromTime as inTime
+                           ,ToTime as ExpectedOutTime,VD.BadgeIssuedDate as ActualInTime,Vd.ActualOutTime,Vd.BadgeNo,VisitorReferenceNo
+                            ,VR.ParentReferenceId,VR.HostAssociateID,dbo.fn_UDF_InitialCaps(Vd.BadgeStatus) as BadgeStatus
+                           ,LM.LocationName as Facility,Vr.Comments,Vr.HostDepartment,Vr.Offset,NULL AS FrstVisitingLoc
+                           ,(Select [dbo].[VMS_fnGenerateBadgeStatusForClient](ParentReferenceId,'IN')) AS RecBadgeStatus
+                           FROM
+                                  VisitDetails Vd WITH (NOLOCK) 
+                                  JOIN VisitorRequest Vr WITH (NOLOCK) ON Vd.RequestID = Vr.RequestID
+                                  JOIN VisitorMaster Vm  WITH (NOLOCK) ON Vr.VisitorID= Vm.VisitorID
+                                  Join TblLocationMaster LM WITH (NOLOCK) On LM.LocationId=Vr.LocationId or LM.CountryCityFacility=VR.facility                               
+                                  WHERE Vd.[Date]>= @FromDate AND Vd.[Date]<=@checkdate  
+                                                AND Vr.[Status] in ('Submitted','updated')
+                                                AND (vr.LocationId = @LocationId or VR.Facility=@code)                                     
+                                                AND vd.BadgeStatus ='Issued'
+                                                AND (vm.FirstName like '%'+@Word+'%' 
+                                                       or vm.LastName like '%'+@Word+'%'
+                                                       or vr.HostID like '%'+@Word+'%'
+                                                       or vm.Company like '%'+@Word+'%'
+                                                       or vd.BadgeNo like '%'+@Word+'%')                                   
+                                                and (vr.ExternalRequestCameFrom is null or vr.ExternalRequestCameFrom in ('ClientVisit'))
+                                                and VR.purpose='Client'                                       
+                                  ORDER BY 
+                                  VR.ParentReferenceId desc,
+                                  FromDate Desc,
+                                  FromTime Desc 
+              END
+              ELSE IF @ReqStatus = 'OUT'
+              BEGIN
+                     
+                     SELECT 
+                     Vd.VisitDetailsID as DetailsID,1 as Cnt,Vr.VisitorID,Vr.RequestID,Vd.date,Vd.VisitDetailsID as VisitDetailsID
+                     ,RequestStatus,FirstName as Name,Company,ToDate,FromDate,Designation,Vm.Country as NativeCountry,
+                     (SELECT VALUE FROM dbo.fn_UDF_SplitCharacter(Vm.MobileNo,'-') WHERE  idx=1) AS MobileNo
+                     ,ISNULL(Vm.EmailID,'') as EmailID,Replace(Purpose,'Select Purpose','') as Purpose
+                     ,Replace(LM.LocationCity,'Select','') as VisitingCity,HostID as Host,FromTime as inTime
+                     ,ToTime as ExpectedOutTime,VD.BadgeIssuedDate as ActualInTime,Vd.ActualOutTime,crd.VcardNumber as BadgeNo,VisitorReferenceNo
+                     ,VR.ParentReferenceId,VR.HostAssociateID,dbo.fn_UDF_InitialCaps(Vd.BadgeStatus) as BadgeStatus
+                     ,LM.LocationName as Facility,Vr.Comments,Vr.HostDepartment,Vr.Offset       
+                     ,'' AS RecBadgeStatus
+                     FROM
+                           VisitDetails Vd WITH (NOLOCK) 
+                           JOIN VisitorRequest Vr WITH (NOLOCK) ON Vd.RequestID = Vr.RequestID
+                           JOIN VisitorMaster Vm  WITH (NOLOCK) ON Vr.VisitorID= Vm.VisitorID
+						   join ClientRequestDetails crd WITH (NOLOCK) ON vr.RequestID=crd.RequestID
+                           Join TblLocationMaster LM WITH (NOLOCK) On LM.LocationId=Vr.LocationId or LM.CountryCityFacility=VR.facility
+                           WHERE  Vd.[Date]>= @FromDate AND Vd.[Date]<=@checkdate 
+                                  AND Vr.[Status] in ('Submitted','updated')
+                                  AND (vr.LocationId = @LocationId or VR.Facility=@code)                                   
+                                  AND vd.BadgeStatus IN ('Returned','Lost')
+                                  AND (vm.FirstName like '%'+@Word+'%' 
+                                         or vm.LastName like '%'+@Word+'%'
+                                         or vr.HostID like '%'+@Word+'%'
+                                         or vm.Company like '%'+@Word+'%'
+                                         or vd.BadgeNo like '%'+@Word+'%')                                    
+                                  and (vr.ExternalRequestCameFrom is null or vr.ExternalRequestCameFrom in ('ClientVisit'))
+                                  and VR.purpose='Client'
+                                  and (Select [dbo].[VMS_fnGenerateBadgeStatusForClient](Vr.ParentReferenceId,'OUT')) <> 'Issued'                                  
+                                  ORDER BY 
+                                  ParentReferenceId desc,
+                                  FromDate Desc,
+                                  inTime Desc
+              END                  
+                     
+COMMIT TRANSACTION
+END TRY
+BEGIN CATCH
+       ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN  
+       SELECT
+       @ErrorMessage =ERROR_MESSAGE(),
+       @ErrorSeverity = ERROR_SEVERITY(),
+       @ErrorState = ERROR_STATE();
+       RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH     
+
+RETURN 1 
+SET NOCOUNT OFF;     
+END
