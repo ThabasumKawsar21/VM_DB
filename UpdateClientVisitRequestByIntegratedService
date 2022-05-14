@@ -1,0 +1,66 @@
+
+CREATE PROCEDURE [dbo].[UpdateClientVisitRequestByIntegratedService]
+(
+ @FirstName VARCHAR(50)
+,@LastName VARCHAR(50)
+,@CompanyName Varchar(50)
+,@Gender char(2)
+,@CreatedBy Varchar(15)
+,@LocationId Int
+,@Purpose VARCHAR(30)
+,@HostID VARCHAR(200)
+,@FromDate DATE
+,@ToDate DATE
+,@FromTime TIME(7)
+,@ToTime TIME(7)
+,@ExternalRequestCameFrom varchar(20)
+,@Mobile varchar(20)
+,@ExternalRequestId int,
+@CountryId int
+,@Offset varchar(10)
+,@RequestID Int Output
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+
+	DECLARE @CreatedDate DATETIME 
+	SET @CreatedDate=GETDATE()
+
+	UPDATE  VisitorMaster SET FirstName=@FirstName,LastName=@LastName,Company=@CompanyName,CreatedBy=@CreatedBy,CreatedDate=@CreatedDate,Gender=@Gender,MobileNo=@Mobile,Country=@CountryId
+	WHERE [VisitorID] IN (Select [VisitorID] from [dbo].[VisitorRequest] where [ExternalRequestId]=@ExternalRequestId)
+	
+	UPDATE  MSTR_VisitorMaster SET FirstName=@FirstName,LastName=@LastName,Company=@CompanyName,CreatedBy=@CreatedBy,CreatedDate=@CreatedDate,Gender=@Gender,MobileNo=@Mobile,Country=@CountryId
+	WHERE MasterVisitorID IN (Select MasterVisitorId from [dbo].[VisitorRequest] where [ExternalRequestId]=@ExternalRequestId)
+
+	UPDATE VisitorRequest SET RequestedDate=@CreatedDate,LocationId=@LocationId,Purpose=@Purpose,HostID=@HostID,FromDate=@FromDate,
+	ToDate=@ToDate,FromTime=@FromTime,ToTime=@ToTime,Createdby=@CreatedBy,CreatedDate=@CreatedDate,Offset=@Offset
+	WHERE [ExternalRequestId]=@ExternalRequestId AND ExternalRequestCameFrom=@ExternalRequestCameFrom
+	
+	SELECT @RequestID = RequestID  FROM VisitorRequest WHERE [ExternalRequestId]=@ExternalRequestId AND ExternalRequestCameFrom=@ExternalRequestCameFrom
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
