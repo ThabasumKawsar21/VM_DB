@@ -1,0 +1,47 @@
+Create PROCEDURE [dbo].[UpdateStatus]  
+@RequestID int,  
+@Success int output  
+AS  
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+   
+ Declare @RequestStatus varchar(50) 
+ --Declare @ReqId int
+ --SET @ReqId= (Select RequestID from VisitDetails where VisitDetailsID=@RequestID )
+ --Updated to use visitdetails id instead of request id as passed parameter
+ update VisitorRequest set RequestStatus='Cancelled', Status='Cancelled' where RequestID =@RequestID
+
+ select @RequestStatus=1 from VisitorRequest WITH (NOLOCK) where RequestID=@RequestID and RequestStatus='Cancelled' and Status='Cancelled'  
+   
+ if (@RequestStatus=1)  
+ set @Success=0   
+ else  
+ set @Success=1  
+   
+ select @Success as Success  
+   
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
