@@ -1,0 +1,39 @@
+CREATE PROCEDURE [dbo].[GetLocationForUserRole]
+	@userID varchar(50)	
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+if exists( select ID,UserID,Password,EMailID from UserMaster WITH (NOLOCK) where UserID=@UserID)
+	select l.LocationCity, l.LocationName, b.Description,a.RoleID,c.Country,a.CountryId,a.LocationId 
+	from RoleMapping a WITH (NOLOCK)
+	join Roles b WITH (NOLOCK) on a.RoleID = b.RoleID
+	join TblLocationMaster l WITH (NOLOCK) on l.LocationId = a.LocationId
+	join CountryCode c WITH (NOLOCK) on c.CountryId=l.CountryId
+	 where a.UserID = @userID  and a.IsActive=1 
+
+END TRY
+
+BEGIN CATCH
+
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
