@@ -1,0 +1,41 @@
+
+-- =============================================
+-- Author:	Praveen
+-- Create date: 13/05/2019
+-- Description:	<Description,,>
+-- =============================================
+CREATE PROCEDURE GetIssuedCardCountUnderCities
+@FacilityList varchar(200)
+AS
+BEGIN
+	DECLARE @ErrorMessage VARCHAR(8000);
+	DECLARE @ErrorSeverity INT;
+	DECLARE @ErrorState INT;
+	SET NOCOUNT ON;
+	BEGIN TRY
+		SELECT count(BadgeNo) AS IssuedCount
+		  FROM [OneC_VMS].[dbo].[VisitDetails]
+		  where 
+		substring(BadgeNo,0,4) in(SELECT Split.a.value('.', 'NVARCHAR(MAX)') DATA
+		FROM
+		(
+			SELECT CAST('<X>'+REPLACE(@FacilityList, '|', '</X><X>')+'</X>' AS XML) AS String
+		) AS A
+		CROSS APPLY String.nodes('/X') AS Split(a))
+
+	 and BadgeStatus = 'Issued'
+	END TRY
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+	SELECT
+	@ErrorMessage =ERROR_MESSAGE(),
+	@ErrorSeverity = ERROR_SEVERITY(),
+	@ErrorState = ERROR_STATE();
+	RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH
+RETURN 1 
+SET NOCOUNT OFF;	
+END
