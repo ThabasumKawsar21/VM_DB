@@ -1,0 +1,101 @@
+CREATE PROCEDURE [dbo].[UpdateCheckoutStatus]	-- Add the parameters for the stored procedure here
+	@checkoutDetails varchar(500),
+	@visitDetailId int,
+	@reqStatus varchar(50),
+    @modifiedBy varchar(50)
+
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+	DECLARE @i INT = 1;
+    DECLARE @count int;
+    DECLARE @VCardno varchar(100);
+    DECLARE @VCardStatus varchar(100);
+	DECLARE @OutTime varchar(20);
+	DECLARE @ReqID INT;
+	DECLARE @CardRow varchar(30)
+	SET @OutTime= convert(datetime,getDate(),108); 
+	SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @visitDetailId)
+   
+	IF (SELECT CHARINDEX('|',@checkoutDetails))>0
+	BEGIN
+		SELECT RowId,value into #TempTable
+		 from (
+			 SELECT  ROW_NUMBER()over(order by value asc) as RowId,value FROM STRING_SPLIT(@checkoutDetails,'|')
+         ) as details
+
+		  SELECT @count=  Count(*) FROM #TempTable
+
+		  WHILE @i < (@count+1)
+             BEGIN
+			 SET @VCardno= SUBSTRING((select value from #TempTable where RowId=@i),0,8)
+			 SET @CardRow = (select value from #TempTable where RowId=@i)
+             SET @VCardStatus= SUBSTRING(@CardRow,CHARINDEX('-', @CardRow) + 1, LEN(@CardRow))
+			  IF @VCardStatus='issued'
+			   BEGIN
+				   UPDATE VisitDetails
+				   SET BadgeStatus='Returned',ActualOutTime=@OutTime,LastUpdatedDate=getdate()  Where  RequestID=@ReqID and BadgeNo=@VCardno
+				   UPDATE ReissuedCardDetails
+				   SET BadgeStatus='Returned',LastUpdatedDate=@OutTime Where  RequestID=@ReqID and BadgeNo=@VCardno
+			   END
+			   ELSE
+			   BEGIN
+				   UPDATE VisitDetails
+				   SET BadgeStatus=@VCardStatus,ActualOutTime=@OutTime,LastUpdatedDate=getdate() Where  RequestID=@ReqID and BadgeNo=@VCardno
+				   UPDATE ReissuedCardDetails
+				   SET BadgeStatus=@VCardStatus Where  RequestID=@ReqID and BadgeNo=@VCardno
+			   END
+			   SET @i=@i+1
+             END
+			 DROP TABLE  #TempTable 
+	END
+	ELSE 
+	BEGIN
+		SET @VCardno= SUBSTRING(@checkoutDetails,0,8)
+        SET @VCardStatus= SUBSTRING(@checkoutDetails,CHARINDEX('-', @checkoutDetails) + 1, LEN(@checkoutDetails))
+		IF @VCardStatus='issued'
+		BEGIN
+			UPDATE VisitDetails
+			SET BadgeStatus='Returned',ActualOutTime=@OutTime ,LastUpdatedDate=getdate()
+			Where  RequestID=@ReqID and BadgeNo=@VCardno
+			UPDATE ReissuedCardDetails
+				   SET BadgeStatus='Returned',LastUpdatedDate=@OutTime Where  RequestID=@ReqID and BadgeNo=@VCardno
+		END
+		ELSE
+		BEGIN
+			UPDATE VisitDetails
+			SET BadgeStatus=@VCardStatus,ActualOutTime=@OutTime ,LastUpdatedDate=getdate()
+			Where  RequestID=@ReqID and BadgeNo=@VCardno
+			 UPDATE ReissuedCardDetails
+				   SET BadgeStatus=@VCardStatus Where  RequestID=@ReqID and BadgeNo=@VCardno
+		END
+	END
+	
+	Update VisitorRequest 
+	set RequestStatus=@reqStatus, LastUpdatedby=@modifiedBy, LastUpdatedDate=GETDATE() 
+	where RequestID=@ReqID 
+	
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
