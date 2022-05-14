@@ -1,0 +1,39 @@
+CREATE PROCEDURE [dbo].[GetActiveFacility]
+	(
+	@City Varchar(50)	
+	)
+	
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+	SELECT LocationName,FacilityCode,LocationId,CountryCityFacility FROM TblLocationMaster	WITH (NOLOCK)
+	WHERE LocationCity = @City and Status='A'
+	ORDER BY LocationName
+	
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
