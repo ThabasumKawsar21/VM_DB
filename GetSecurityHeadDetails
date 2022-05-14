@@ -1,0 +1,10 @@
+CREATE PROCEDURE [dbo].[GetSecurityHeadDetails]
+@CountryCityFacility varchar(50)
+
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+select POCAssociateID,countryCityFacility from SecurityHeadList where CountryCityFacility=@CountryCityFacility
+END
