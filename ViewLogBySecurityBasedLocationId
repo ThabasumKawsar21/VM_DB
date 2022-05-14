@@ -1,0 +1,2182 @@
+
+-- ======================================
+-- Create date: 13 Sep 2011
+-- Description:	View Log By Security
+
+---Modified on 4/05/2013
+---Decription : Get Visit details based on Location Id
+-- =============================================
+CREATE PROCEDURE [dbo].[ViewLogBySecurityBasedLocationId](
+	@AssociateID Varchar(11) =null,
+	@SearchValue Varchar(200)=null,
+	@ReqStatus Varchar(50)=null,
+	@FromDate DATETIME=null,
+	@ToDate DATETIME=null,
+	@ExpressCheckin Varchar(11) = null,
+	@VCardNumber Varchar(11) = null
+	)
+AS
+BEGIN
+SET NOCOUNT ON
+CREATE TABLE #TempTable
+	(
+		RowID int IDENTITY(1, 1), 
+		VisitDetailsID Int	
+	)	
+ CREATE TABLE #SeachEntry 
+	(
+		RowID int IDENTITY(1, 1), 
+		SearchWord VARCHAR(100)
+	)	
+INSERT INTO #SeachEntry(SearchWord) SELECT value FROM dbo.fn_UDF_SplitCharacter(@SearchValue,' ')
+
+	 DECLARE @NumberRecords int, @RowCount int
+	 DECLARE @Word VARCHAR(100)
+	 DECLARE @Query varchar(1000)	
+	 Declare @LocationId Int
+	 DECLARE @Code varchar(100)
+	 DECLARE @countrycode int
+	 SET @NumberRecords = @@ROWCOUNT
+	 SET @RowCount = 1	
+	/*
+	Modifided : Get Facility and City from LocationMaster
+	*/
+	SELECT @LocationId=RM.LocationId,@Code=LM.CountryCityFacility,@countrycode = LM.CountryId
+	FROM [vw_rolemapping_restrict] RM WITH (NOLOCK) Inner Join TblLocationMaster LM WITH (NOLOCK) 
+	ON RM.LocationId=LM.LocationId
+	WHERE UserID = @AssociateID
+		
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED
+
+BEGIN TRANSACTION
+
+	WHILE @RowCount <= @NumberRecords
+		BEGIN
+			SELECT @Word=SearchWord FROM #SeachEntry WHERE RowID = @RowCount
+			
+			IF @countrycode=101
+				BEGIN
+			IF @ReqStatus = 'YET TO ARRIVE'
+				BEGIN
+IF ((@ExpressCheckin <> '') and (@SearchValue = ''))
+                begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')	
+             end
+
+ELSE IF  ((@ExpressCheckin <> '') and (@SearchValue <> ''))
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK)  ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)						
+						AND vd.BadgeStatus IS NULL
+						AND vm.FirstName like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+					    and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.LastName like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vr.HostID like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.Company like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.Designation like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.MobileNo like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')										
+					end
+
+ELSE
+                   begin 
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK)  ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)						
+						AND vd.BadgeStatus IS NULL
+						AND vm.FirstName like '%'+@Word+'%' 
+					    and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vr.HostID like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.Company like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.Designation like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.MobileNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')	
+
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')	
+
+end									
+				END
+			ELSE IF @ReqStatus = 'IN'
+				BEGIN
+				if ((@ExpressCheckin <> '') and (@SearchValue = '')and (@VCardNumber = ''))
+				                begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')	
+end
+else if ((@ExpressCheckin = '') and (@SearchValue = '')and (@VCardNumber <> ''))
+begin 
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+end
+
+else if ((@ExpressCheckin = '') and (@SearchValue <> '')and (@VCardNumber = ''))
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Company like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Designation like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.MobileNo like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+end
+
+else if((@ExpressCheckin <> '') and (@SearchValue <> '') and (@VCardNumber = ''))
+
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.FirstName like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.LastName like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.HostID like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Company like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Designation like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.MobileNo like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+end
+else if((@ExpressCheckin = '') and (@SearchValue <> '') and (@VCardNumber <> ''))
+
+begin 
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.FirstName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.LastName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.HostID like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Company like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Designation like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.MobileNo like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+end
+else if((@ExpressCheckin <> '') and (@SearchValue = '') and (@VCardNumber <> ''))
+begin
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'						
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+end
+
+else if((@ExpressCheckin <> '') and (@SearchValue <> '') and (@VCardNumber <> ''))
+
+begin 
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.FirstName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.LastName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.HostID like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Company like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Designation like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.MobileNo like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+end
+else
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Company like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Designation like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.MobileNo like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+
+end
+
+				END
+			ELSE IF @ReqStatus = 'OUT'
+				BEGIN
+				if ((@ExpressCheckin <> '') and (@SearchValue = '')and (@VCardNumber = ''))
+  begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')	
+end
+
+else if ((@ExpressCheckin = '') and (@SearchValue = '')and (@VCardNumber <> ''))
+begin 
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+end
+else if ((@ExpressCheckin = '') and (@SearchValue <> '')and (@VCardNumber = ''))
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Company like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						 AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Designation like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.MobileNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM ReissuedCardDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+
+
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM ReissuedCardDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+end
+
+else if((@ExpressCheckin <> '') and (@SearchValue <> '') and (@VCardNumber = ''))
+
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.FirstName like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.LastName like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.HostID like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Company like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Designation like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.MobileNo like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+end
+else if((@ExpressCheckin = '') and (@SearchValue <> '') and (@VCardNumber <> ''))
+
+begin 
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.FirstName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.LastName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.HostID like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Company like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Designation like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.MobileNo like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+end
+else if((@ExpressCheckin <> '') and (@SearchValue = '') and (@VCardNumber <> ''))
+begin
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')						
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+end
+
+else if((@ExpressCheckin <> '') and (@SearchValue <> '') and (@VCardNumber <> ''))
+
+begin 
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.FirstName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.LastName like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.HostID like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Company like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Designation like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.MobileNo like '%'+@Word+'%' 
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@Word+'%'
+						AND vd.BadgeNo like '%'+@VCardNumber+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+end
+else
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Company like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Designation like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.MobileNo like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+
+end
+
+				END
+			ELSE
+				IF ((@ExpressCheckin <> '') and (@SearchValue = ''))
+                begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')	
+             end
+
+ELSE IF  ((@ExpressCheckin <> '') and (@SearchValue <> ''))
+begin
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK)  ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)						
+						AND vm.FirstName like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+					    and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId or VR.Facility=@Code)
+						AND vm.LastName like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vr.HostID like '%'+@Word+'%' 
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.Company like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.Designation like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')							
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)						 
+						AND vm.MobileNo like '%'+@Word+'%'
+						AND vr.RequestID = @ExpressCheckin
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')										
+					end
+
+			else
+
+				BEGIN
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.Company like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.Designation like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.MobileNo like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM ReissuedCardDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+			END
+				END
+			ElSE
+				BEGIN
+				IF @ReqStatus = 'YET TO ARRIVE'
+				BEGIN
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK)  ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)						
+						AND vd.BadgeStatus IS NULL
+						AND vm.FirstName like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vr.HostID like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.Company like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.Designation like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IS NULL
+						AND vm.MobileNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					
+				END
+			ELSE IF @ReqStatus = 'IN'
+				BEGIN
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Company like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.Designation like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vm.MobileNo like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM ReissuedCardDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')
+				END
+			ELSE IF @ReqStatus = 'OUT'
+				BEGIN
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Company like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						 AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.Designation like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vm.MobileNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus IN ('Returned','Lost', 'Damaged','Forgot to bring')
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+				
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM ReissuedCardDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+						and VR.purpose not in ('Client')		
+				END
+			ELSE
+				BEGIN
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.FirstName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.LastName like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vr.HostID like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.Company like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.Designation like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK)
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vm.MobileNo like '%'+@Word+'%' 
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')					
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa','ClientVisit'))
+					
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM ReissuedCardDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 
+						AND Vd.[Date]  between @FromDate AND @ToDate  
+						AND Vr.[Status] in ('Submitted','updated')
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo like '%'+@Word+'%'
+						and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))	
+			END
+				END
+
+
+						
+			SET @RowCount = @RowCount + 1			 
+		END
+	SELECT 
+			TT.VisitDetailsID as DetailsID
+			,COUNT(TT.VisitDetailsID) as Cnt
+			,Vr.VisitorID
+			,Vr.RequestID
+			,Vd.date
+			,Vd.VisitDetailsID as VisitDetailsID
+			,RequestStatus
+			,FirstName as Name
+			,Company
+			,(SELECT VALUE FROM dbo.fn_UDF_SplitCharacter(Vm.MobileNo,'-') WHERE  idx=1)AS MobileNo
+			,FromDate
+			,ToDate
+			,Designation
+			,Vm.Country as NativeCountry
+			,ISNULL(Vm.EmailID,'') as EmailID
+			,Replace(Purpose,'Select Purpose','') as Purpose
+			,Replace(LM.LocationCity,'Select','') as VisitingCity
+			,HostID as Host
+			,FromTime as inTime
+			,ToTime as ExpectedOutTime
+			,CONVERT(VARCHAR(8),VD.BadgeIssuedDate,108) as ActualInTime
+			,Vd.ActualOutTime
+			,Vd.BadgeNo
+			,VisitorReferenceNo
+			,dbo.fn_UDF_InitialCaps(Vd.BadgeStatus) as BadgeStatus
+			,LM.LocationName as Facility
+			,Vr.Comments
+			,Vr.HostDepartment
+			,Vr.Offset 
+		 FROM #TempTable TT 
+			JOIN VisitDetails Vd WITH (NOLOCK) on TT.VisitDetailsID =Vd.VisitDetailsID 
+			JOIN VisitorRequest Vr WITH (NOLOCK) ON Vd.RequestID = Vr.RequestID
+			JOIN VisitorMaster Vm  WITH (NOLOCK) ON Vr.VisitorID= Vm.VisitorID
+			Join TblLocationMaster LM WITH (NOLOCK) On LM.LocationId=Vr.LocationId or LM.CountryCityFacility=VR.Facility
+		GROUP BY 
+			TT.VisitDetailsID 
+			,Vr.VisitorID
+			,Vr.RequestID
+			,Vd.[Date]
+			,Vd.VisitDetailsID
+			,RequestStatus
+			,FirstName ,LastName
+			,Company
+			,Vm.MobileNo
+			,FromDate
+			,ToDate
+			,Designation
+			,Vm.Country 
+			,Vm.EmailID
+			,Purpose
+			,LM.LocationCity
+			,HostID
+			,FromTime 
+			,ToTime 
+			,Vd.ActualOutTime
+			,VD.BadgeIssuedDate
+			,Vd.BadgeNo
+			,VisitorReferenceNo
+			,Vd.BadgeStatus
+			,LM.LocationName
+			,Vr.Comments
+			,Vr.HostDepartment 
+			,Vr.Offset 
+		ORDER BY 
+			FromDate Desc 
+			,FromTime Desc 
+			
+COMMIT TRANSACTION
+DROP TABLE #SeachEntry
+DROP TABLE #TempTable
+END
