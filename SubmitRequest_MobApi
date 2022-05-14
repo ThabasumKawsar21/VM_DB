@@ -1,0 +1,112 @@
+CREATE PROCEDURE [dbo].[SubmitRequest_MobApi]
+	-- Add the parameters for the stored procedure here
+	(
+	   @FirstName varchar(100) =NULL,
+       @Company varchar(100)=NULL,
+       @MobileNumber Varchar(50)=NULL,
+       @HostID varchar(200)=NULL,
+       @visitortype  varchar(40)=NULL,
+	   @Country varchar(100)=NULL,
+	   @City varchar(100)=NULL,
+       @Facility varchar(100)=NULL
+      ,@FromDate varchar(100)=NULL
+      ,@ToDate varchar(100)=NULL
+      ,@FromTime varchar(100)=NULL
+      ,@ToTime varchar(100)=NULL
+      ,@Createdby varchar(100)=NULL
+	  ,@Status varchar(100)=NULL
+	  ,@permitITEquipments varchar(100)=NULL
+	  ,@parentReferenceId varchar(100)=NULL
+	  ,@bulkUpload varchar(100)=NULL
+	  ,@masterVID varchar(100)=NULL
+	  ,@offset varchar(100)=NULL
+	)
+AS
+BEGIN
+
+SET NOCOUNT ON 
+
+BEGIN TRY
+BEGIN TRAN
+
+       DECLARE @ErrorMessage VARCHAR(8000);
+       DECLARE @ErrorSeverity INT;
+       DECLARE @ErrorState INT;
+
+        declare @newmastervisitorid int 
+	   declare @newvisitorid int
+
+	   --check and insert in MSTR_mastervisitor
+       Declare @MasterVisitorID int=(select TOP 1 MasterVisitorID from MSTR_VisitorMaster where MobileNo=@MobileNumber and FirstName=@FirstName  and Company=@Company)
+       if(@MasterVisitorID is null)
+       begin
+       insert into [MSTR_VisitorMaster](FirstName,Company,MobileNo,CreatedBy,CreatedDate,visitortype,other,IsConfidential,EmailID)
+       values(@FirstName,@Company,@MobileNumber,@HostID,GETDATE(),@visitortype,NULL,0,NULL)
+       set @newmastervisitorid=SCOPE_IDENTITY() 
+       end
+       else
+       begin
+       set @newmastervisitorid= @MasterVisitorID 
+       end
+
+	   --check and insert in visitormaster
+	   Declare @VisitorID int=(select TOP 1 VisitorID from VisitorMaster where MobileNo=@MobileNumber and FirstName=@FirstName  and Company=@Company)
+       if(@VisitorID is null)
+       begin
+       insert into [VisitorMaster](FirstName,Company,MobileNo,CreatedBy,CreatedDate,IsConfidential,EmailID,D_MasterVisitorID)
+       values(@FirstName,@Company,@MobileNumber,@HostID,GETDATE(),0,NULL,@newmastervisitorid)
+       set @newvisitorid=SCOPE_IDENTITY() 
+       end
+       else
+       begin
+       set  @newvisitorid= @VisitorID 
+       end
+
+	   insert into  VisitorRequest([RequestedDate]
+      ,[VisitorID]
+	  ,[Country]
+	  ,[City]
+      ,[Facility]
+      ,[Purpose]
+      ,[HostID]
+      ,[FromDate]
+      ,[ToDate]
+      ,[FromTime]
+      ,[ToTime]
+      ,[RequestStatus]
+      ,[Createdby]
+      ,[CreatedDate]    
+      ,[Status]
+      ,[PermitITEquipments]      
+      ,[ParentReferenceId]
+      ,[ISSMSEnabled]
+      ,[BulkUpload]    
+      ,[OutlookNotfication],BJMailFlag,HostAssociateID,MasterVisitorID,Comments,Offset
+      ) values (GETDATE(),@newvisitorid,@Country,@City,@Facility,@visitortype,@HostID,@FromDate,@ToDate,@FromTime,@ToTime,'yet to arrive',@Createdby,GETDATE(),
+	  'Submitted',@permitITEquipments,@parentReferenceId,1,0,1,0,@Createdby,@newmastervisitorid,'from mobile',@offset)
+
+	  select SCOPE_IDENTITY() as RequestID
+
+
+	   
+
+
+COMMIT TRAN
+END TRY
+BEGIN CATCH
+ROLLBACK TRAN
+       IF (@@ERROR <> 0)
+       BEGIN  
+              SELECT
+              @ErrorMessage =ERROR_MESSAGE(),
+              @ErrorSeverity = ERROR_SEVERITY(),
+              @ErrorState = ERROR_STATE();
+
+              RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+       END
+END CATCH
+RETURN 1 
+
+SET NOCOUNT OFF;     
+
+END
