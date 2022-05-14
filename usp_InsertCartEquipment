@@ -1,0 +1,54 @@
+CREATE PROCEDURE [dbo].[usp_InsertCartEquipment](@EquipmentType varchar(50),
+@EquipmentMake varchar(50),
+@EquipmentSerial varchar(50),
+@EquipmentModel varchar(50),
+@Createdby varchar(10),
+@CartID varchar(10))
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	if(@CartID='Empty')
+	begin
+	insert into tbl_DummyEquipmentDetails(
+	EquipmentType,
+	EquipmentMake,
+	EquipmentSerial,
+	EquipmentModel,
+	CreatedBy,
+	InsertedOn) values
+	(@EquipmentType,
+	@EquipmentMake,
+	@EquipmentSerial,
+	@EquipmentModel,
+	@Createdby,
+	GETDATE()
+	)
+	select SCOPE_IDENTITY() as Equipmentunique
+	end
+	else
+	begin
+	Update tbl_DummyEquipmentDetails set CartID=@CartID where EquipmentuniqueID=@CartID
+	insert into tbl_DummyEquipmentDetails(
+	EquipmentType,
+	EquipmentMake,
+	EquipmentSerial,
+	EquipmentModel,
+	CreatedBy,
+	InsertedOn,
+	CartID) values
+	(@EquipmentType,
+	@EquipmentMake,
+	@EquipmentSerial,
+	@EquipmentModel,
+	@Createdby,
+	GETDATE(),
+	@CartID
+	)
+		select SCOPE_IDENTITY() as Equipmentunique
+	end
+END
