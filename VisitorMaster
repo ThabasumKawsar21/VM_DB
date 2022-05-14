@@ -1,0 +1,21 @@
+CREATE TABLE [dbo].[VisitorMaster] (
+    [VisitorID]          INT          IDENTITY (1, 1) NOT NULL,
+    [VisitorReferenceNo] VARCHAR (50) NULL,
+    [FirstName]          VARCHAR (50) NULL,
+    [LastName]           VARCHAR (50) NULL,
+    [Company]            VARCHAR (50) NULL,
+    [Designation]        VARCHAR (50) NULL,
+    [Country]            VARCHAR (50) NULL,
+    [MobileNo]           VARCHAR (20) NULL,
+    [EmailID]            VARCHAR (50) NULL,
+    [CreatedBy]          VARCHAR (50) NULL,
+    [CreatedDate]        DATETIME     NULL,
+    [LastUpdatedBy]      VARCHAR (50) NULL,
+    [LastUpdateDate]     DATETIME     NULL,
+    [Gender]             CHAR (2)     NULL,
+    [IsConfidential]     BIT          NULL,
+    [Others] VARCHAR(50) NULL, 
+    [D_MasterVisitorID] INT NULL, 
+    CONSTRAINT [PK_VisitorMaster] PRIMARY KEY CLUSTERED ([VisitorID] ASC) WITH (FILLFACTOR = 80)
+);
+
