@@ -1,0 +1,58 @@
+CREATE PROCEDURE [dbo].[SubmitVisitDetails_MobApi]
+	-- Add the parameters for the stored procedure here
+	(
+	    @RequestID int,
+      @Date  varchar(100),
+	  @Type varchar(50),
+	  @Make varchar(50)=NULL,
+      @Model varchar(50)=NULL,
+      @Serial varchar(50)=NULL
+	)
+AS
+BEGIN
+
+SET NOCOUNT ON 
+
+BEGIN TRY
+BEGIN TRAN
+
+       DECLARE @ErrorMessage VARCHAR(8000);
+       DECLARE @ErrorSeverity INT;
+       DECLARE @ErrorState INT;
+
+	  -- declare @visitID int
+   --insert into [VisitDetails](RequestID,Date) values(@RequestID,@Date)
+  
+	  -- SET @visitID = SCOPE_IDENTITY()
+
+	    IF(@Type IS NOT NULL)
+		BEGIN
+	    declare @typeid int=(select MasterDataID from MasterData where MasterDataDescription=@Type and MasterDataType='Equipment')
+       insert into VisitorEquipments([VisitDetailsID]
+      ,[MasterDataID]
+      ,[Make]
+      ,[Model]
+      ,[SerialNo]) values(@RequestID,@typeid,@Make,@Model,@Serial) 
+      
+	   select SCOPE_IDENTITY() as equipementID
+	   END
+
+COMMIT TRAN
+END TRY
+BEGIN CATCH
+ROLLBACK TRAN
+       IF (@@ERROR <> 0)
+       BEGIN  
+              SELECT
+              @ErrorMessage =ERROR_MESSAGE(),
+              @ErrorSeverity = ERROR_SEVERITY(),
+              @ErrorState = ERROR_STATE();
+
+              RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+       END
+END CATCH
+RETURN 1 
+
+SET NOCOUNT OFF;     
+
+END
