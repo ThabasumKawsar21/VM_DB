@@ -1,0 +1,29 @@
+CREATE PROCEDURE [dbo].[usp_UpdateCartProfildetails](@VisitorType varchar(100),
+@MobileNo varchar(14),
+@Name varchar(50),
+@Organization varchar(50),
+@AssociateID varchar(10),
+@IsEquipment int,
+@CartID int)
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+update tbl_VisitorCart set  [VisitorType]=@VisitorType
+      ,[MobileNo]=@MobileNo
+      ,[Organization]=@Organization
+      ,[VisitorName]=@Name
+      ,[TimeStamp]=GETDATE()
+      ,[Flag]=1,
+	  AssociateID=@AssociateID,
+	  IsEquipment=@IsEquipment where CartID=@CartID and AssociateID=@AssociateID
+
+	   Select CartID,VisitorName,[LocationName],Date,[FromTime],[ToTime],[Ismultilocation] from tbl_VisitorCart 
+	where AssociateID=@AssociateID and [Flag]=1
+	order by CartID desc	
+END
