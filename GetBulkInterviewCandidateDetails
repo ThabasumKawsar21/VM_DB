@@ -1,0 +1,47 @@
+CREATE PROCEDURE [dbo].[GetBulkInterviewCandidateDetails](
+@ParentReferenceID INT =NULL
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+  (select (SELECT cast(count(VisitorRequest.ParentReferenceId)AS  varchar(1000))FROM
+ VisitorRequest WITH (NOLOCK) WHERE VisitorRequest.BulkUpload=1 and VisitorRequest.ParentReferenceId is not null
+ AND VisitorRequest.ParentReferenceId=@ParentReferenceID ) as Entries,
+Vm.FirstName,
+  Vm.LastName,Vm.Gender,Vm.EmailID  as Email
+  --,Vm.MobileNo as Mobile
+  ,SUBSTRING(Vm.MobileNo,5,15)as Mobile,
+  VisitorRequest.RequestID,Vm.VisitorID from
+   VisitorMaster Vm WITH (NOLOCK)  inner join  
+   VisitorRequest WITH (NOLOCK) on Vm.VisitorID
+  =VisitorRequest.VisitorID where VisitorRequest.ParentReferenceId=@ParentReferenceID 
+    and  VisitorRequest.BulkUpload=1 and VisitorRequest.ParentReferenceId is not null
+
+     group by VisitorRequest.ParentReferenceId,Vm.FirstName,
+     Vm.LastName,Vm.Gender,Vm.EmailID,VisitorRequest.RequestID,Vm.VisitorID,Vm.MobileNo)
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
