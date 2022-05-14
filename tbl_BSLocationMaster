@@ -1,0 +1,8 @@
+CREATE TABLE [dbo].[tbl_BSLocationMaster]
+(
+	[LocationID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, 
+    [LocationName] VARCHAR(50) NULL, 
+    [BSLocationName] VARCHAR(50) NULL, 
+    [IsActive] INT NULL, 
+    [BSLocationID] INT NULL
+)
