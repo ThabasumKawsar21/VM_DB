@@ -1,0 +1,36 @@
+CREATE PROCEDURE [dbo].[GetAllLocationData]    
+ 
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+
+  --  SELECT DISTINCT B.[CountryId],B.[Code],B.[Country] from [OneC_VMS].[dbo].[CountryCode] B WHERE B.[IsActive] = 'A'
+
+  --SELECT  DISTINCT [LocationCity] ,B.[CountryId],B.[Country] FROM [OneC_VMS].[dbo].[TblLocationMaster] A 
+  --LEFT JOIN [OneC_VMS].[dbo].[CountryCode] B ON  B.[CountryId] = A.[CountryId] WHERE B.[IsActive] = 'A' AND A.[Status] = 'A' ORDER BY B.[CountryId],[LocationCity]
+
+  --SELECT [LocationName],[LocationId],[LocationCity] FROM [OneC_VMS].[dbo].[TblLocationMaster] A 
+  -- WHERE [Status] = 'A' ORDER BY [LocationName]
+  --Sai code
+ --Select Distinct Concat(RTRIM(LTRIM(CountryCode)),'-',CityCode,'-',FacilityDesc)as Code,CONCAT(RTRIM(LTRIM(CountryDesc)),'-',CityDesc,'-',FacilityDesc) as Codedesc,1 as Id from CentralRepository.[dbo].[vw_CentralRepository_LocationMaster_Locationmaster] L
+ --inner Join CentralRepository.[dbo].[vw_CentralRepository_GSMS_AssociateSeatInfo] G on L.LocationCode=G.HCMLocationCode
+ --inner join CountryCode C on L.CountryDesc=C.Country
+ --where Status='A' and IsActive='A' order by Code ASC
+ --Sai code
+ select distinct CountryCityFacility as Code, CountryCityFacility as Codedesc,1 as Id from TBLlocationmaster where status='A' order by CountryCityFacility Asc
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+ROLLBACK TRANSACTION
+		DECLARE @ErrorMessage varchar(2000) = CONVERT(varchar(2000),OBJECT_NAME(@@PROCID)+':'+ ERROR_MESSAGE() )
+		
+END CATCH	
+END
