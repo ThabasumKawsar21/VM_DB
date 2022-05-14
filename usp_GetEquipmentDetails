@@ -1,0 +1,21 @@
+
+CREATE PROCEDURE [dbo].[usp_GetEquipmentDetails](@VisitorID int)
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+Declare @VisitID int=(SELECT top 1 VD.VisitDetailsID from VisitorRequest VR inner join VisitDetails VD on VR.RequestID=VD.RequestID
+	inner join VisitorEquipments VE on VD.VisitDetailsID=VE.VisitDetailsID inner join MasterData MD
+	on VE.MasterDataID=MD.MasterDataID
+	where (VR.MasterVisitorId=@VisitorID OR VR.VisitorID=@VisitorID) group by VD.VisitDetailsID order by 1 ASC)
+
+	SELECT MD.MasterDataDescription,VE.Make,VE.Model,VE.SerialNo,MD.MasterDataID,VE.VisitorEquipmentID,VE.VisitDetailsID from VisitDetails VD 
+	inner join VisitorEquipments VE on VD.VisitDetailsID=VE.VisitDetailsID inner join MasterData MD
+	on VE.MasterDataID=MD.MasterDataID where VE.VisitDetailsID=@VisitID
+END 
+ 
