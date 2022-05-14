@@ -1,0 +1,47 @@
+CREATE PROCEDURE [dbo].[GetBulkRequestStatus]
+(
+	-- Add the parameters for the stored procedure here
+	@VisitDetailsID int,
+	@RequestStatus Varchar(20) out
+	)
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+declare @ParentReferenceID int
+declare @count int
+declare @Totalcount int
+
+    -- Insert statements for procedure here
+	set @ParentReferenceID= (select Vr.ParentReferenceId from VisitDetails Vd WITH (NOLOCK) join
+    VisitorRequest Vr WITH (NOLOCK) on Vr.RequestID=Vd.RequestID
+    where Vd.VisitDetailsID=@VisitDetailsID)
+   declare @Statustable table
+(
+Statuss Varchar(20),
+RequestID int,
+ParentReferenceId int
+)
+insert into @Statustable
+   select Vr.Status,Vr.RequestID,Vr.ParentReferenceId from VisitDetails Vd WITH (NOLOCK) join
+  VisitorRequest Vr WITH (NOLOCK) on Vr.RequestID=Vd.RequestID
+   where Vr.ParentReferenceId=@ParentReferenceID 
+   set @Totalcount=(SELECT COUNT(1) from @Statustable)
+     set @count=(SELECT COUNT(1) from @Statustable where Statuss in( 'Cancelled'))
+   
+   if(@count=@Totalcount)
+   begin
+      set @RequestStatus='CANCELLED'  
+
+   end
+   else 
+   --IF EXISTS(SELECT Statuss from @Statustable where Statuss in ('Updated') and  Statuss Not in  ('Cancelled'))
+   begin
+   set @RequestStatus='NOTCANCELLED'  
+   end
+  
+  select @RequestStatus  
+END
+
