@@ -1,0 +1,16 @@
+CREATE PROCEDURE [dbo].[GetVisitorCardInfoForSurrenderMailProcess]
+@visitDetailsID int 
+AS
+BEGIN
+	SET NOCOUNT ON;
+    DECLARE @ReqID INT;
+	SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @visitDetailsID)
+	IF EXISTS(Select RequestId from ReissuedCardDetails where RequestID=@ReqID)
+	BEGIN
+	Select BadgeNo,VisitDetailsID from ReissuedCardDetails where  RequestID=@ReqID and Date=cast(getdate() as date) and BadgeStatus='Returned'
+	END
+	ELSE
+	BEGIN
+	Select BadgeNo,VisitDetailsID from VisitDetails where  RequestID=@ReqID and Date=cast(getdate() as date) and BadgeStatus='Returned'
+	END
+END
