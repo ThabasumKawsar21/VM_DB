@@ -1,0 +1,40 @@
+
+/****** Object:  StoredProcedure [dbo].[InsertVisitorMasterDetailsRevamp]    Script Date: 4/15/2019 12:42:10 PM ******/
+
+CREATE PROCEDURE [dbo].[InsertVisitorMasterDetailsRevampforBS](
+       @FirstName varchar(100),
+       @Company varchar(100),
+       @MobileNumber Varchar(50),
+       @HostID varchar(10),
+       @visitortype  varchar(40),
+       @others varchar(50),
+       @IsConfidance varchar(10),
+       @EmailID varchar(50),
+          @BSID int)
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+       declare @newvisitorid int 
+       --IF NOT EXISTS(select [MasterVisitorID] from [dbo].[MSTR_VisitorMaster] where FirstName = @FirstName and MobileNo = @MobileNumber)
+       --begin
+       Declare @MasterVisitorID int=(select TOP 1 MasterVisitorID from MSTR_VisitorMaster where MobileNo=@MobileNumber and FirstName=@FirstName  and Company=@Company)
+       if(@MasterVisitorID is null)
+       begin
+       insert into [MSTR_VisitorMaster](FirstName,Company,MobileNo,CreatedBy,CreatedDate,visitortype,other,IsConfidential,EmailID,BSID)
+values(@FirstName,@Company,@MobileNumber,@HostID,GETDATE(),@visitortype,LTRIM(RTRIM(@others)),@IsConfidance,@EmailID,@BSID)
+       set @newvisitorid=SCOPE_IDENTITY() 
+       select @newvisitorid as [MasterVisitorID],1 as Flag
+       end
+       else
+       begin
+       select @MasterVisitorID as [MasterVisitorID],1 as Flag
+       end
+       --end
+       --else
+       --begin
+       --select [MasterVisitorID],0 as Flag from [dbo].[MSTR_VisitorMaster] where FirstName = @FirstName and MobileNo = @MobileNumber
+       --end
+END
+
