@@ -1,0 +1,17 @@
+CREATE PROCEDURE [dbo].[usp_GetTimeZonebyFacility]
+@Facility varchar(100)
+
+AS
+BEGIN
+      
+SET NOCOUNT ON;
+Declare @cid varchar(5);
+Declare @tzd varchar(255);
+
+set @cid = (Select CountryId from TblLocationMaster where CountryCityFacility = @Facility)
+
+set @tzd = (Select timezonedescription from Countrycode  where Countryid = @cid)
+
+	SELECT @tzd 
+
+end
