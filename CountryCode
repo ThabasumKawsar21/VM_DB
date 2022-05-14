@@ -1,0 +1,10 @@
+CREATE TABLE [dbo].[CountryCode] (
+    [Country]     VARCHAR(255) NULL,
+    [Code]        VARCHAR(255) NULL,
+    [CountryId]   INT            IDENTITY (1, 1) NOT NULL,
+    [IsActive]    CHAR (1)       DEFAULT ('I') NOT NULL,
+	[TimeZone] Varchar(20) NULL,
+	[TimeZoneDescription] Varchar (255) NULL,
+    [CultureInfo] VARCHAR (20)   NULL,
+    PRIMARY KEY CLUSTERED ([CountryId] ASC) WITH (FILLFACTOR = 80)
+);
