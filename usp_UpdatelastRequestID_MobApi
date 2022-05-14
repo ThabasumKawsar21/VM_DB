@@ -1,0 +1,10 @@
+CREATE PROCEDURE [dbo].[usp_UpdatelastRequestID_MobApi](@RequestID int)
+	
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	Update VisitorRequest set ParentReferenceId=@RequestID where RequestID=@RequestID
+END
