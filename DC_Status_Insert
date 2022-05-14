@@ -1,0 +1,47 @@
+CREATE PROCEDURE [dbo].[DC_Status_Insert]
+	-- Add the parameters for the stored procedure here
+	 @Dctempid varchar(200),
+	 @DCTempuniqueid int output
+	
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+    -- Insert statements for procedure here
+	IF EXISTS (select TempUnique_Id from DC_Status where DCTempid=@Dctempid)
+	begin
+	set @DCTempuniqueid=0
+		SELECT @DCTempuniqueid
+	end
+
+	else
+	begin
+
+	insert into DC_Status(DCTempid) values(@Dctempid)
+	
+	set @DCTempuniqueid=(select TempUnique_Id from DC_Status where DCTempid=@Dctempid)
+	SELECT @DCTempuniqueid
+	end
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH
+RETURN 1 
+SET NOCOUNT OFF;	
+END
