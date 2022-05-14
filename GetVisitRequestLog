@@ -1,0 +1,36 @@
+CREATE PROCEDURE [dbo].[GetVisitRequestLog]
+	@visitDetailsId VARCHAR (50)
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+
+	DECLARE @ReqID INT;
+
+  SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @visitDetailsId)
+  Select Badgeno,BadgeIssuedDate,BadgeStatus 
+  from VisitDetails where RequestID=@ReqID and BadgeStatus ='issued' and BadgeNo is not null
+  
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
