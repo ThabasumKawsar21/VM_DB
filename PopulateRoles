@@ -1,0 +1,6 @@
+CREATE PROCEDURE [dbo].[PopulateRoles] 	
+AS
+BEGIN
+SET NOCOUNT ON 
+select RoleID,Description from Roles WITH (NOLOCK) where Flag in ('A','B')
+END	
