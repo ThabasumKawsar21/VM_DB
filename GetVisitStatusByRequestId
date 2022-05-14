@@ -1,0 +1,49 @@
+CREATE PROCEDURE [dbo].[GetVisitStatusByRequestId]	
+(
+	@VisitDetailsId Int	,
+	@HostId varchar(11)
+)
+	
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+SELECT vr.[RequestID]
+      ,vd.[Date] 
+      ,vd.[ActualOutTime]
+      ,vd.[BadgeNo]
+      ,vd.[BadgeIssuedDate] As ActualCheckin
+      ,vd.[BadgeStatus]
+      ,vr.FromTime as ExpectedCheckin
+      ,vr.ToTime as ExpectedCheckOut
+            
+  FROM [OneC_VMS].[dbo].[VisitDetails] vd WITH (NOLOCK)
+  join [OneC_VMS].[dbo].[VisitorRequest] vr WITH (NOLOCK)
+  on vd.RequestID=vr.RequestID    
+  where vd.VisitDetailsID= @VisitDetailsId   
+
+  insert into [dbo].[VMSAuditTrack](HostId,Reason,RequestedDate,ReferenceId) values(@HostId,'Track Visit Status',getdate(),@VisitDetailsId)
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
