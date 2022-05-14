@@ -1,0 +1,12 @@
+CREATE PROCEDURE usp_GetTimeZone(@TimeZoneID int)
+
+AS
+BEGIN
+       
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       select [TimeZone] from [BSTimeZoneMaster] where [TimeZoneID]=@TimeZoneID
+END
+GO
+
