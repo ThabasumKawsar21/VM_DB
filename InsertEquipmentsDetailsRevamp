@@ -1,0 +1,19 @@
+CREATE PROCEDURE [dbo].[InsertEquipmentsDetailsRevamp]
+( 
+	@VisiterID int,
+	@MasterDataID int,
+	@Make varchar(50)=null,
+	@Model varchar(50)=null,
+	@Serial Varchar(50)=null,
+	@others varchar(50)=null
+)
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	
+	insert into [dbo].[MSTR_VisitorEquipments] (MasterVisitorID,MasterDataID,Make,Model,SerialNo,Others) 
+	values(@VisiterID,@MasterDataID,@Make,@Model,@Serial,@others)
+END
