@@ -1,0 +1,16 @@
+CREATE PROCEDURE [dbo].[usp_GetCartDetails](@AssociateID varchar(10))
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	  Select CartID,VisitorName,[LocationName],Date,[FromTime],[ToTime],[Ismultilocation],HostID
+	  ,isDatacenterAccess,IsEquipment,LocationCount,Others from tbl_VisitorCart  VC	
+	where AssociateID=@AssociateID and [Flag]=1 
+	--and  TimeStamp>=GetDate()
+	order by CartID desc		
+END
