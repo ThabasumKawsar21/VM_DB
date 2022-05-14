@@ -1,0 +1,19 @@
+CREATE TABLE [dbo].[SecurityHeadList]
+(
+	[POCID] [varchar](50) NOT NULL,
+	[POCAssociateId] [varchar](300) NOT NULL,
+	[CountryID] [int] NULL,
+	[City] [varchar](200) NULL,
+	[FacilityID] [int] NULL,
+	[FactilityName] [varchar](200) NULL,
+	[Status] [bit] NULL,
+	[CreateBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+[CountryCityFacility] VARCHAR(100) NULL, 
+    PRIMARY KEY CLUSTERED 
+(
+	[POCID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 80) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
