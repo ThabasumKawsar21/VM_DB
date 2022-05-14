@@ -1,0 +1,15 @@
+CREATE TABLE [dbo].[tbl_CartLocation](
+	[CartLocationID] [int] IDENTITY(1,1) NOT NULL,
+	[CartLocation] [varchar](150) NOT NULL,
+	[CartLocationHostID] [varchar](50) NOT NULL,
+	[CartLocationDate] [varchar](5000) NOT NULL,
+	[CartLocationStartTime] [varchar](50) NOT NULL,
+	[CartLocationEndTime] [varchar](50) NOT NULL,
+	[TimeStamp] [datetime] NOT NULL,
+	[CreatedBy] [varchar](50) NOT NULL,
+	[CartID] [int] NOT NULL,
+	[CartLocationNameID] [varchar](100) NULL,
+	[Flag] [int] NULL,
+	[SameLocationID] [int] NULL, 
+    CONSTRAINT [PK_tbl_CartLocation] PRIMARY KEY ([CartLocationID])
+) ON [PRIMARY]
