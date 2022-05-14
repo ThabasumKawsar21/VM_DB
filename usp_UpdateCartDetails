@@ -1,0 +1,93 @@
+CREATE PROCEDURE [dbo].[usp_UpdateCartDetails](@VisitorType varchar(100),
+@MobileNo varchar(14),
+@Name varchar(50),
+@Organization varchar(50),
+@NativeCountry varchar(50),
+@LocationName varchar(50),
+@HostId varchar(50),
+@Date varchar(5000),
+@StartTime varchar(50),
+@ToTime varchar(50),
+@AssociateID varchar(10),
+@isDatacenterAccess int,
+@IsVisitorConfidance int,
+@IsEquipment int,
+@CartID int,
+@Ismultilocation int,
+@Others varchar(50),
+@LocationCount int,
+@LocationID varchar(100),
+@EuipmqntUniqID int)
+       -- Add the parameters for the stored procedure here
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       --Declare @EuipmentID int=(select top 1 EuipmqntUniqID from tbl_VisitorCart where CartID=@EuipmqntUniqID)
+       if(@HostId='Empty')
+       begin
+       Declare @AssciateName varchar(100)=(select CONCAT(Associate_FirstName,',',Associate_LastName) from CentralRepository.dbo.vw_CentralRepository_Associate_Details where Associate_ID=@AssociateID)
+              update tbl_VisitorCart set  [VisitorType]=@VisitorType
+      ,[MobileNo]=@MobileNo
+      ,[Organization]=@Organization
+      ,[VisitorName]=@Name
+      ,[NativeCountry]=@NativeCountry
+      ,[LocationName]=@LocationName
+      ,[HostID]=Concat(@AssciateName,' ','(',@AssociateID,')')
+      ,[Date]=@Date
+      ,[FromTime]=@StartTime
+      ,[ToTime]=@ToTime
+      ,[TimeStamp]=GETDATE()
+      ,[Flag]=1,
+         AssociateID=@AssociateID,
+         isDatacenterAccess=@isDatacenterAccess,
+         IsVisitorConfidance=@IsVisitorConfidance,
+         IsEquipment=@IsEquipment,
+         [Ismultilocation]=@Ismultilocation,
+         Others=@Others,
+         LocationCount=@LocationCount,
+         LocationID=@LocationID,
+         EuipmqntUniqID=@EuipmqntUniqID where CartID=@CartID and AssociateID=@AssociateID
+
+            Select CartID,VisitorName,[LocationName],Date,[FromTime],[ToTime],[Ismultilocation],HostID
+         ,isDatacenterAccess,IsEquipment,LocationCount,Others from tbl_VisitorCart  VC   
+       where AssociateID=@AssociateID and CartID=@CartID
+       --and  TimeStamp>=GetDate()
+       order by CartID desc
+       end
+       else
+       begin  
+       update tbl_VisitorCart set  [VisitorType]=@VisitorType
+      ,[MobileNo]=@MobileNo
+      ,[Organization]=@Organization
+      ,[VisitorName]=@Name
+      ,[NativeCountry]=@NativeCountry
+      ,[LocationName]=@LocationName
+      ,[HostID]=@HostId
+      ,[Date]=@Date
+      ,[FromTime]=@StartTime
+      ,[ToTime]=@ToTime
+      ,[TimeStamp]=GETDATE()
+      ,[Flag]=1,
+         AssociateID=@AssociateID,
+         isDatacenterAccess=@isDatacenterAccess,
+         IsVisitorConfidance=@IsVisitorConfidance,
+         IsEquipment=@IsEquipment,
+         [Ismultilocation]=@Ismultilocation,
+         Others=@Others,
+         LocationCount=@LocationCount,
+         LocationID=@LocationID,
+         EuipmqntUniqID=@EuipmqntUniqID where CartID=@CartID and AssociateID=@AssociateID
+
+            Select CartID,VisitorName,[LocationName],Date,[FromTime],[ToTime],[Ismultilocation],HostID
+         ,isDatacenterAccess,IsEquipment,LocationCount,Others from tbl_VisitorCart  VC   
+       where AssociateID=@AssociateID and CartID=@CartID
+       --and  TimeStamp>=GetDate()
+       order by CartID desc
+       END 
+
+       END
