@@ -1,0 +1,16 @@
+CREATE TABLE [dbo].[LinkHistory_Backup](
+[ID] [int] IDENTITY(1,1) NOT NULL,
+	[LinkID] [int] NOT NULL,
+	[RequestID] [int] NOT NULL,
+	[EmailID] [varchar](50) NOT NULL,
+	[SentOn] [datetime] NOT NULL,
+	[HostID] [varchar](50) NOT NULL,
+	[IsActive] [bit] NOT NULL,
+	[ExpiredOn] [datetime] NULL,
+ CONSTRAINT [PK_LinkHistory_1] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 90) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
