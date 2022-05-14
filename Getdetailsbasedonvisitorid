@@ -1,0 +1,17 @@
+CREATE PROCEDURE [dbo].[Getdetailsbasedonvisitorid]
+(
+	@visitorid int 
+)
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+    -- Insert statements for procedure here
+	SELECT VM.* from [dbo].[MSTR_VisitorMaster] VM WITH (NOLOCK) where [MasterVisitorID] = @visitorid
+	Select equip.*,mstr.MasterDataDescription as EquipmentDesc from [dbo].[MSTR_VisitorEquipments] equip  WITH (NOLOCK)
+	inner join [dbo].[MasterData] mstr WITH (NOLOCK)
+	on mstr.MasterDataID = equip.MasterDataID where MasterVisitorID =@visitorid
+	select VP.* from [dbo].[MSTR_VisitorProof] VP WITH (NOLOCK) where MasterVisitorID =@visitorid
+
+END
