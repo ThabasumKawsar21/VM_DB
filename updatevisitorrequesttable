@@ -1,0 +1,71 @@
+CREATE PROCEDURE [dbo].[updatevisitorrequesttable]   
+ -- Add the parameters for the stored procedure here  
+
+@Location varchar(50),
+@Purpose varchar(50),
+@fromdate date,
+@todate date,
+@fromtime time,
+@totime time,
+@offset varchar(50),
+@HostID varchar(50),
+@isSMSEnable bit,
+@OutlookNotfication bit,
+@Status varchar(50),
+@isperminete bit,
+@RequestID int,
+@RequestStatus varchar(50),
+@LastUpdatedby varchar(50)
+
+AS  
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+  
+    -- Insert statements for procedure here  
+       if(@HostID is null or @HostID ='')
+       begin
+       Declare @AssociateName varchar(100) = (select CONCAT(Associate_FirstName,',',Associate_LastName) from CentralRepository.dbo.vw_CentralRepository_Associate_Details where Associate_ID=@LastUpdatedby)
+       select @HostID
+update VisitorRequest set RequestedDate=GETDATE(),Facility=@Location,Purpose=@Purpose,
+       HostID=Concat(@AssociateName,' ','(',@LastUpdatedby,')'),FromDate=@fromdate,
+       ToDate=@todate,FromTime=@fromtime,
+       ToTime=@totime,RequestStatus=@RequestStatus,LastUpdatedby=@LastUpdatedby
+       ,LastUpdatedDate=GETDATE(),Status=@Status,
+       PermitITEquipments=@isperminete,ISSMSEnabled=@isSMSEnable
+       ,OutlookNotfication=@OutlookNotfication,Offset=@offset where RequestID=@RequestID
+       end
+       else
+       begin
+       update VisitorRequest set RequestedDate=GETDATE(),Facility=@Location,Purpose=@Purpose,
+       HostID=@HostID,FromDate=@fromdate,
+       ToDate=@todate,FromTime=@fromtime,
+       ToTime=@totime,RequestStatus=@RequestStatus,LastUpdatedby=@LastUpdatedby
+       ,LastUpdatedDate=GETDATE(),Status=@Status,
+       PermitITEquipments=@isperminete,ISSMSEnabled=@isSMSEnable
+       ,OutlookNotfication=@OutlookNotfication,Offset=@offset where RequestID=@RequestID
+       end
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN  
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH     
+
+RETURN 1 
+SET NOCOUNT OFF;     
+END
