@@ -1,0 +1,10 @@
+CREATE TABLE [dbo].[tblLocationMapping] (
+    [LocationID]          INT          NOT NULL,
+    [HCMLocationCode]     VARCHAR (50) NOT NULL,
+    [LocationDescription] VARCHAR (50) NULL,
+    [City]                VARCHAR (50) NULL,
+    [Status]              VARCHAR (1)  NULL, 
+    [Primarkeyvalue] INT IDENTITY (1, 1) NOT NULL, 
+    CONSTRAINT [PK_tblLocationMapping] PRIMARY KEY ([Primarkeyvalue])
+);
+
