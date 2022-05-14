@@ -1,0 +1,78 @@
+CREATE PROCEDURE [dbo].[Reissuecards]
+	@RequestID int,	
+	@VisitorID int,
+	@VisitorName varchar(50),
+	@VcardNumber varchar(50),
+	@AccessCardNumber int,
+	@reissuereason varchar(50),
+	@ParentID int,
+	@reissuecollectedby int,
+	@reissueddispatchby int,
+	@reportedfacility varchar(50)
+
+	
+AS
+BEGIN
+
+
+SET NOCOUNT ON;
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+--getting the old v-card
+declare @Vcardno varchar(50);
+set @Vcardno = (
+select top 1 VcardNumber from  ClientRequestDetails where RequestID = @RequestID and VisitorID = @VisitorID and ReissueStatus is NULL)
+
+---updating details of the old v-card
+UPDATE ClientRequestDetails SET 
+ReissueStatus = @reissuereason
+,ReissuedFacility = @reportedfacility
+,ReportedOn = GETDATE()
+,ReportedBy = @reissuecollectedby
+where
+RequestID=@RequestID and
+parentrefernceid = @ParentID  and
+VisitorID=@VisitorID and
+VcardNumber = @Vcardno
+
+
+---inserting the new card details
+INSERT INTO ClientRequestDetails 
+  (RequestID,
+  VisitorID,
+  ParentRefernceID,
+  VisitorName,
+  VcardNumber,
+  AccessCardNumber,
+  NotificationToHost,
+  DispatchedToHost,CollectedBy,Dispatchedby,Dispatchedtime,NotifiedTime,Notifiedby,ReportedOn,ReportedBy,DispatchedFacility)
+  values (@RequestID,@VisitorID,@ParentID,@VisitorName,@VcardNumber,@AccessCardNumber,1,1,@reissuecollectedby,@reissueddispatchby,getdate(),GETDATE(),@reissueddispatchby,NULL,NULL,@reportedfacility)
+
+----UPDATE ClientRequestDetails SET ReissuedFacility = @reportedfacility
+--where
+ 
+-- VcardNumber = @Vcardno and
+--RequestID=@RequestID and
+--parentrefernceid = @ParentID  
+-- and VisitorID=@VisitorID  
+
+ COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+
+END
