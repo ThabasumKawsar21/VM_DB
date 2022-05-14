@@ -1,0 +1,13 @@
+CREATE PROCEDURE [dbo].[usp_GetCartLocation](@CartID int)
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	SELECT CartLocation,CartLocationDate,CartLocationStartTime,CartLocationEndTime,CartLocationHostID,CartLocationNameID from [tbl_CartLocation] CL
+	inner join tbl_VisitorCart VC on CL.CartID=VC.CartID   where CL.CartID=@CartID
+END
