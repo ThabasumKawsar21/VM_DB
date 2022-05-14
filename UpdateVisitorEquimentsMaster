@@ -1,0 +1,30 @@
+CREATE PROCEDURE [dbo].[UpdateVisitorEquimentsMaster]
+@visitorID varchar(50),
+@MasterDataID int,
+@Make varchar(50),
+@Model varchar(50),
+@Serial varchar(50),
+@Others varchar(50),
+@equipmentslno int
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+if @equipmentslno =0
+BEGIN
+delete from [MSTR_VisitorEquipments] where MasterVisitorID=@visitorID
+END
+	Insert into 
+		[dbo].[MSTR_VisitorEquipments]
+	values( @visitorID,
+		@MasterDataID
+		,@Make 
+		,@Model
+		,@Serial 
+		,@Others)	
+
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
