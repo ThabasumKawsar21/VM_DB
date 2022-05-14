@@ -1,0 +1,13 @@
+CREATE PROCEDURE [dbo].[GetBadgeStatusClients]
+	@parentID int
+	
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	select requestid,badgestatus from visitdetails where requestid= @parentID
+
+END
+GO
