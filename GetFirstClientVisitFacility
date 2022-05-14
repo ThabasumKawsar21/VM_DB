@@ -1,0 +1,12 @@
+CREATE PROCEDURE [dbo].[GetFirstClientVisitFacility]
+	@parentreferenceid int
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+	select VR.ParentReferenceId,LM.LocationName from VisitorRequest VR
+join TblLocationMaster LM on LM.LocationId=Vr.LocationId or LM.CountryCityFacility=VR.facility
+ where parentreferenceid=@parentreferenceid
+order by fromdate,fromtime
+END
