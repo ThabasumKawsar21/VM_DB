@@ -1,0 +1,92 @@
+ -- =============================================
+-- Author:           <Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:      <Description,,>
+-- =============================================
+CREATE PROCEDURE [dbo].[usp_InsertCartLocation] (@LocationName varchar(50),
+@HostID varchar(50),
+@Date varchar(5000),
+@StartTime varchar(50),
+@EndTime varchar(50),
+@AssociateID varchar(50),
+@CartID int,
+@CartLocationNameID varchar(100),
+@Status varchar(10))
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       if(@Status='insert')
+       begin
+   if(@HostID='Empty')
+   begin
+   Declare @AssciateName varchar(100)=(select CONCAT(Associate_FirstName,',',Associate_LastName) from CentralRepository.dbo.vw_CentralRepository_Associate_Details where Associate_ID=@AssociateID)
+       insert into tbl_CartLocation([CartLocation]
+      ,[CartLocationHostID]
+      ,[CartLocationDate]
+      ,[CartLocationStartTime]
+      ,[CartLocationEndTime]
+      ,[TimeStamp]
+      ,[CreatedBy]
+      ,[CartID],CartLocationNameID,Flag) values(@LocationName,Concat(@AssciateName,' ','(',@AssociateID,')'),@Date,@StartTime,@EndTime,GETDATE(),@AssociateID,@CartID,@CartLocationNameID,1)
+
+         select [CartLocation],[CartLocationDate],[CartLocationStartTime]
+      ,[CartLocationEndTime] from tbl_CartLocation where CartID=@CartID
+
+         end
+         else
+         begin
+         insert into tbl_CartLocation([CartLocation]
+      ,[CartLocationHostID]
+      ,[CartLocationDate]
+      ,[CartLocationStartTime]
+      ,[CartLocationEndTime]
+      ,[TimeStamp]
+      ,[CreatedBy]
+      ,[CartID],CartLocationNameID,Flag) values(@LocationName,@HostID,@Date,@StartTime,@EndTime,GETDATE(),@AssociateID,@CartID,@CartLocationNameID,1)
+
+         select [CartLocation],[CartLocationDate],[CartLocationStartTime]
+      ,[CartLocationEndTime] from tbl_CartLocation where CartID=@CartID
+         end
+         end
+         else
+         begin
+         Delete from tbl_CartLocation where CartID=@CartID
+       if(@HostID='Empty')
+   begin
+   Declare @AssciateName1 varchar(100)=(select CONCAT(Associate_FirstName,',',Associate_LastName) from CentralRepository.dbo.vw_CentralRepository_Associate_Details where Associate_ID=@AssociateID)
+       insert into tbl_CartLocation([CartLocation]
+      ,[CartLocationHostID]
+      ,[CartLocationDate]
+      ,[CartLocationStartTime]
+      ,[CartLocationEndTime]
+      ,[TimeStamp]
+      ,[CreatedBy]
+      ,[CartID],CartLocationNameID,Flag) values(@LocationName,Concat(@AssciateName1,' ','(',@AssociateID,')'),@Date,@StartTime,@EndTime,GETDATE(),@AssociateID,@CartID,@CartLocationNameID,1)
+
+         select [CartLocation],[CartLocationDate],[CartLocationStartTime]
+      ,[CartLocationEndTime] from tbl_CartLocation where CartID=@CartID
+
+         end
+         else
+         begin
+         insert into tbl_CartLocation([CartLocation]
+      ,[CartLocationHostID]
+      ,[CartLocationDate]
+      ,[CartLocationStartTime]
+      ,[CartLocationEndTime]
+      ,[TimeStamp]
+      ,[CreatedBy]
+      ,[CartID],CartLocationNameID,Flag) values(@LocationName,@HostID,@Date,@StartTime,@EndTime,GETDATE(),@AssociateID,@CartID,@CartLocationNameID,1)
+
+         select [CartLocation],[CartLocationDate],[CartLocationStartTime]
+      ,[CartLocationEndTime] from tbl_CartLocation where CartID=@CartID
+         end
+         end
+
+END
+
