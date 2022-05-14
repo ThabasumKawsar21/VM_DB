@@ -1,0 +1,37 @@
+CREATE PROCEDURE [dbo].[GetHostNamePS]
+	@SerachText varchar(50),
+@visitortype varchar(50)
+
+
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	if @visitortype='Client'
+
+    Begin 
+	SELECT Distinct top 50 CONCAT(RTRIM(LTRIM(Associate_FirstName)),' ', RTRIM(LTRIM(Associate_LastName)),' ','(',RTRIM(LTRIM(Associate_ID)),')') as AssociateName from CentralRepository.dbo.vw_CentralRepository_Associate_Details AD
+	inner join [CentralRepository].[dbo].[vw_CentralRepository_Designation] D on AD.JobCode=D.JobCode
+	where (Associate_FirstName like '%'+@SerachText+'%' OR Associate_LastName like '%'+@SerachText+'%' OR Associate_ID like '%'+@SerachText+'%')and 
+	Replace(Replace(Replace(Replace(Replace(Replace(Replace(SUBSTRING(GradeCode,2,3),'C',''),'B',''),'I',''),'A',''),'D',''),'E',''),'F','')<=50
+	and AD.IsActive='A' and Left(D.JobCode,3) != 'CWR'
+	order by AssociateName ASC
+	End
+	ELSE
+	Begin
+		SELECT Distinct top 50 CONCAT(RTRIM(LTRIM(Associate_FirstName)),' ', RTRIM(LTRIM(Associate_LastName)),' ','(',RTRIM(LTRIM(Associate_ID)),')') as AssociateName from CentralRepository.dbo.vw_CentralRepository_Associate_Details AD
+	inner join [CentralRepository].[dbo].[vw_CentralRepository_Designation] D on AD.JobCode=D.JobCode
+	where (Associate_FirstName like '%'+@SerachText+'%' OR Associate_LastName like '%'+@SerachText+'%' OR Associate_ID like '%'+@SerachText+'%')and 
+	--Replace(Replace(Replace(Replace(Replace(Replace(Replace(SUBSTRING(GradeCode,2,3),'C',''),'B',''),'I',''),'A',''),'D',''),'E',''),'F','')<=50
+	--and 
+	AD.IsActive='A' and Left(D.JobCode,3) != 'CWR'
+	order by AssociateName ASC
+	End
+
+
+END
+
