@@ -1,0 +1,14 @@
+CREATE PROCEDURE [dbo].[UpdateRemainderPassReturnCount]
+	@remaindercount int,
+	@ParentreferenceID int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	Update clientrequestdetails 
+SET RemainderPassReturn=@remaindercount 
+where ParentRefernceID=@ParentreferenceID
+
+END
+GO
