@@ -1,0 +1,12 @@
+CREATE PROCEDURE [dbo].[usp_GetTimezonebyfacility_PS]
+	@countryName varchar(100)
+
+AS
+BEGIN
+
+SET NOCOUNT ON;
+
+	Select timezone,timezonedescription from Countrycode  where Country  = @countryName
+
+	end
+
