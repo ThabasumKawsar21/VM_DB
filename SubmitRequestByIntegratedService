@@ -1,0 +1,103 @@
+
+
+CREATE PROCEDURE [dbo].[SubmitRequestByIntegratedService]
+(
+ @FirstName VARCHAR(50)
+,@LastName VARCHAR(50)
+,@CompanyName Varchar(50)
+,@Gender char(2)
+,@CreatedBy Varchar(15)
+,@LocationId Int
+,@Purpose VARCHAR(30)
+,@HostID VARCHAR(200)
+,@FromDate DATE
+,@ToDate DATE
+,@FromTime TIME(7)
+,@ToTime TIME(7)
+,@ExternalRequestCameFrom varchar(20)
+,@Mobile varchar(20)
+,@ExternalRequestId int
+,@PermitId int
+,@RequestID Int Output
+,@SafetyPermitType varchar(50)
+,@BuddyId varchar(50)
+,@ContractorCount int
+,@CountryId int
+,@SafetyPermitTypeId int
+,@Offset varchar(10)
+,@countrycityfacility varchar(20)
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+
+--Declare Variables
+
+DECLARE @VisitorID INT
+DECLARE @MasterVisitorID INT
+DECLARE @CreatedDate DATETIME 
+----DECLARE @visitortype varchar(30)
+
+----IF @Purpose='Client'
+----begin
+----SET @visitortype = 'Clients'
+----end
+----ELSE
+----begin
+----SET @visitortype = @Purpose
+----end
+
+
+SET @CreatedDate=GETDATE()
+
+INSERT INTO VisitorMaster(FirstName,LastName,Company,CreatedBy,CreatedDate,Gender,MobileNo,Country,isconfidential)
+VALUES(@FirstName,@LastName,@CompanyName,@CreatedBy,@CreatedDate,@Gender,@Mobile,@CountryId,0)
+SELECT @VisitorID=@@Identity
+ --SELECT @RequestID=@@Identity
+
+INSERT INTO MSTR_VisitorMaster(FirstName,LastName,Company,CreatedBy,CreatedDate,Gender,MobileNo,Country,isconfidential,VisitorType,other)
+Values(@FirstName,@LastName,@CompanyName,@CreatedBy,@CreatedDate,@Gender,@Mobile,@CountryId,0,@Purpose,@Purpose)
+SELECT @MasterVisitorID=@@IDENTITY
+
+if @Purpose='Client'
+begin
+INSERT INTO VisitorRequest(RequestedDate,VisitorID,LocationId,Purpose,HostID,FromDate,ToDate,FromTime,ToTime,RequestStatus,[Status],Createdby,CreatedDate,ExternalRequestCameFrom,ExternalRequestId,PermitId,SafetyPermitType,BuddyId,RecurrencePattern,Bulkupload,permititequipments,outlooknotfication,SafetyPermitTypeId,Offset,BJMailFlag,HostAssociateID,MasterVisitorID,facility )
+VALUES(@CreatedDate,@VisitorID,null,@Purpose,@HostID,@FromDate,@ToDate,@FromTime,@ToTime,'yet to arrive','Submitted',@CreatedBy,@CreatedDate,@ExternalRequestCameFrom,@ExternalRequestId,@PermitId,@SafetyPermitType,@BuddyId,'DAILY',0,1,0,@SafetyPermitTypeId,@Offset,0,@CreatedBy,@MasterVisitorID,@countrycityfacility)
+end
+else
+begin
+INSERT INTO VisitorRequest(RequestedDate,VisitorID,LocationId,Purpose,HostID,FromDate,ToDate,FromTime,ToTime,RequestStatus,[Status],Createdby,CreatedDate,ExternalRequestCameFrom,ExternalRequestId,PermitId,SafetyPermitType,BuddyId,RecurrencePattern,Bulkupload,permititequipments,outlooknotfication,SafetyPermitTypeId,Offset,BJMailFlag,HostAssociateID,MasterVisitorID,facility )
+VALUES(@CreatedDate,@VisitorID,@LocationId,@Purpose,@HostID,@FromDate,@ToDate,@FromTime,@ToTime,'yet to arrive','Submitted',@CreatedBy,@CreatedDate,@ExternalRequestCameFrom,@ExternalRequestId,@PermitId,@SafetyPermitType,@BuddyId,'DAILY',0,1,0,@SafetyPermitTypeId,@Offset,0,@CreatedBy,@MasterVisitorID,@countrycityfacility)
+end
+
+SELECT @RequestID = @@IDENTITY 
+INSERT INTO VisitorEmergencyContact(Address,FromDate,ToDate,RequestID) VALUES ('',@FromDate,@ToDate,@RequestID)
+
+update VisitorRequest SET parentreferenceid=@RequestID where requestid= @RequestID
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
