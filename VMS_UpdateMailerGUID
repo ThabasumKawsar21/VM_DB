@@ -1,0 +1,36 @@
+CREATE PROCEDURE [dbo].[VMS_UpdateMailerGUID]   
+ -- Add the parameters for the stored procedure here  
+ @RequestId int,   
+ @GUID varchar(500)  
+AS  
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+ 
+    -- Insert statements for procedure here  
+ update dbo.VisitorRequest set MailGuid=@GUID  
+ where RequestID=@RequestId 
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
