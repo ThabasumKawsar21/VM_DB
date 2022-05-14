@@ -1,0 +1,63 @@
+CREATE PROCEDURE [dbo].[ReissueVcard]
+	@currentcard varchar(100),
+	@newcard varchar(100),
+	@visitdetailsid varchar(100),
+	@reason varchar(100)
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @ReqID INT;
+DECLARE @BadgeIssuedDate datetime
+DECLARE @Date date
+DECLARE @IssuedBy varchar(50)
+DECLARE @LastUpdatedDate varchar(50)
+	
+	SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID =@visitdetailsid)
+	SET @BadgeIssuedDate=(select BadgeIssuedDate from VisitDetails WITH (NOLOCK) where VisitDetailsID=@visitdetailsid and BadgeNo=@currentcard)
+	SET @Date =(select Date from VisitDetails WITH (NOLOCK) where VisitDetailsID=@visitdetailsid and BadgeNo=@currentcard)
+	SET @IssuedBy=(select IssuedBy from VisitDetails WITH (NOLOCK) where VisitDetailsID=@visitdetailsid and BadgeNo=@currentcard)
+	
+	IF EXISTS(Select RequestId from ReissuedCardDetails where VisitDetailsID=@visitdetailsid and BadgeNo=@currentcard)
+	BEGIN
+	UPDATE ReissuedCardDetails
+	SET BadgeStatus=@reason,IssuedBy=@IssuedBy where VisitDetailsID=@visitdetailsid and BadgeNo=@currentcard
+	END
+	ELSE
+	BEGIN
+	set @LastUpdatedDate = (Select LastUpdatedDate from VisitDetails WITH (NOLOCK) where VisitDetailsID =@visitdetailsid)
+	if @LastUpdatedDate is null
+	begin
+	set @BadgeIssuedDate = @BadgeIssuedDate
+	end
+	else
+	begin
+	set @BadgeIssuedDate = @LastUpdatedDate
+	end
+	INSERT INTO ReissuedCardDetails(VisitDetailsId,RequestID,Date,BadgeNo,BadgeIssuedDate,BadgeStatus,IssuedBy,LastUpdatedDate)
+	VALUES(@visitdetailsid,@ReqID,@Date,@currentcard,@BadgeIssuedDate,@reason,@IssuedBy,GETDATE());
+	END
+	Update VisitDetails
+	SET BadgeNo=@newcard,BadgeStatus='issued',LastUpdatedDate= getdate() where VisitDetailsID=@visitdetailsid and BadgeNo=@currentcard
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
