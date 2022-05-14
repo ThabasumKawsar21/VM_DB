@@ -1,0 +1,15 @@
+
+CREATE PROCEDURE [dbo].[GetVisitorCardInfoForReissueMailProcess] 
+	-- Add the parameters for the stored procedure here
+	@visitDetailsID int 
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	Select a.BadgeNo as NewCard,(Select top 1 BadgeNo  from ReissuedCardDetails where VisitDetailsID = @visitDetailsID order by Lastupdateddate desc) as Oldcard,
+	b.BadgeStatus,(Select top 1 Lastupdateddate  from ReissuedCardDetails where VisitDetailsID = @visitDetailsID order by Lastupdateddate desc) as LastUpdatedDate  from VisitDetails a join ReissuedCardDetails b on a.VisitDetailsID=b.VisitDetailsID
+	where a.VisitDetailsID=@visitDetailsID
+END
