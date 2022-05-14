@@ -1,0 +1,33 @@
+CREATE PROCEDURE [dbo].[SearchVisitors_Revamp] 
+-- Add the parameters for the stored procedure here
+(  
+@PageNumber INT,
+@PageSize INT,
+@SortColumn VARCHAR(50) = NULL ,
+@SortOrder VARCHAR(50) = NULL ,
+@SearchValue VARCHAR(50) = NULL , 
+@HostId Varchar(50)=NULL
+)        
+AS      
+BEGIN
+DECLARE @CutoffDate DateTime = dateadd(Month,-36,getdate());
+SET NOCOUNT ON;  
+
+SELECT VisitorId, Name,Company,MobileNo,VisitorType,(select top 1 IsNull(Permititequipments,0) from VisitorRequest VI where VI.MasterVisitorID=XX.VisitorId order by Permititequipments desc) PermitITEquipments, isUserCreated , RequestId
+FROM 
+(SELECT DISTINCT TOP 50 VisitorId, Name,Company,MobileNo,VisitorType,PermitITEquipments, max(isUserCreated) as isUserCreated , RequestId FROM (
+          SELECT vm.MasterVisitorID as VisitorId,(ISNULL(VM.FirstName,'') + ' ' + ISNULL(VM.LastName,'')) Name,VM.Company,VM.MobileNo,VM.VisitorType,                
+			 0 PermitITEquipments,
+          case   when (VR.HostAssociateID=@HostId) then 1 else 0 end as isUserCreated, 
+                (select max(VX.RequestID) from VisitorRequest VX where vx.mastervisitorid = vm.MasterVisitorID ) as RequestId
+          FROM MSTR_VisitorMaster  VM 
+                inner join VisitorRequest  VR  on VM.MasterVisitorID=VR.MasterVisitorID
+                WHERE VR.CreatedDate> @CutoffDate 
+          AND ((VM.MobileNo like '%'+@SearchValue+'%')  OR (VM.Company like '%'+@SearchValue+'%') OR ((ISNULL(VM.FirstName,'') + ' ' + ISNULL(VM.LastName,'')) like '%'+ @SearchValue+'%'))             
+                )AS TEMP 
+                group by VisitorId, Name,Company,MobileNo,VisitorType,PermitITEquipments,RequestId
+                order by isUserCreated desc, RequestId desc) XX
+				order by isUserCreated desc, RequestId desc
+
+
+END
