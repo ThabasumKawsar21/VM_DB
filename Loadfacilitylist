@@ -1,0 +1,17 @@
+CREATE PROCEDURE [dbo].[Loadfacilitylist]
+(
+	@secuirtyid int 
+)
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+    -- Insert statements for procedure here
+	declare @facilityid int;
+set @facilityid = (select LocationId from vw_rolemapping_restrict where userid=@secuirtyid)
+
+select CountryCityFacility from TblLocationMaster where LocationCity = (select LocationCity from TblLocationMaster where locationid=@facilityid) 
+and status='A'
+
+END
