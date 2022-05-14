@@ -1,0 +1,42 @@
+
+CREATE PROCEDURE [dbo].[GetFacilityDetailsByFacilityCode]
+(
+@facilityCode varchar(30)
+
+)AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+ SELECT  LocationId,[LocationName],[LocationCity],[LocationAddress],lm.[CountryId] as [CountryId],[LocationAddress],CountryCityFacility
+ 
+ FROM [OneC_VMS].[dbo].[TblLocationMaster] lm WITH (NOLOCK) Join dbo.CountryCode cc WITH (NOLOCK) On
+ lm.CountryId=cc.CountryId
+ where FacilityCode=@facilityCode and Status='A'
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
