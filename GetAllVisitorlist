@@ -1,0 +1,21 @@
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE [dbo].[GetAllVisitorlist]
+	-- Add the parameters for the stored procedure here
+	@parentID int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	select distinct(VR.VisitorID),VR.RequestID, VM.FirstName,VM.Company,VM.MobileNo,VR.PermitITEquipments,CR.AccessCardNumber,CR.VcardNumber,CR.Dispatchedtime,CR.NotifiedTime,CR.CollectedBy,
+	VR.purpose,VR.HostID,FORMAT(VR.FromDate,'dd/MM/yyyy' )AS FromDate ,CONVERT(VARCHAR, VR.FromTime, 100) AS FromTime,FORMAT(VR.ToDate,'dd/MM/yyyy' )AS ToDate,CONVERT(VARCHAR, VR.ToTime, 100) AS ToTime,VR.Facility,
+		VD.badgestatus,CR.ReportedFacility,CR.ReportedOn,VD.BadgeNo
+	from VisitorRequest VR 
+	JOIN Visitormaster VM on VM.VisitorID=VR.VisitorID
+	LEFT  JOIN ClientRequestDetails CR on CR.RequestID=VR.RequestID
+		join VisitDetails VD on VR.requestId= VD.requestid 
+	where (VR.ParentReferenceId=@parentID or VR.RequestID=@parentID) and VR.purpose='Client'
+		and CR.ReissueStatus is NULL and VR.RequestStatus not in ('Cancelled')
+	order by FromDate,ToDate asc
+END
