@@ -1,0 +1,49 @@
+
+-- change log : sp altered to add vcard number to log details.
+----------------------------------------------------------
+CREATE PROCEDURE [dbo].[getlogdetails]
+	@parentid int,
+	@visitorid int
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+	select distinct(VR.VisitorID),VR.RequestID, VM.FirstName,VM.Company,VM.MobileNo,VR.PermitITEquipments,
+	CR.AccessCardNumber,CR.VcardNumber,CR.Dispatchedtime,CR.NotifiedTime,CR.CollectedBy,
+	VR.purpose,VR.HostID,FORMAT(VR.FromDate,'dd/MM/yyyy' )AS FromDate 
+	,CONVERT(VARCHAR, VR.FromTime, 100) AS FromTime,FORMAT(VR.ToDate,'dd/MM/yyyy' )AS ToDate,CONVERT(VARCHAR, VR.ToTime, 100) 
+	AS ToTime,CR.DispatchedFacility as Facility,
+		VD.badgestatus,CR.dispatchedby, CR.ReissueStatus,CR.ReportedFacility,
+		CR.ReportedOn,CR.ReissuedFacility,CR.ReportedBy,VD.BadgeNo
+	from VisitorRequest VR 
+	JOIN Visitormaster VM on VM.VisitorID=VR.VisitorID
+	LEFT JOIN ClientRequestDetails CR on CR.RequestID=VR.RequestID
+		join VisitDetails VD on VR.requestId= VD.requestid 
+	where (VR.ParentReferenceId=@parentid or VR.RequestID=@parentid) and VR.purpose='Client' AND VR.visitorid = @visitorid
+	order by CR.Dispatchedtime,FromDate,ToDate asc
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
