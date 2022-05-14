@@ -1,0 +1,30 @@
+CREATE PROCEDURE [dbo].[GetClientCardInfoForReissueCard] 
+	-- Add the parameters for the stored procedure here
+	@RequestID int,
+	@VisitorID int,
+	@ParentID int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	Select RequestID,
+  VisitorID,
+  ParentRefernceID,
+  VisitorName,
+  VcardNumber,
+  AccessCardNumber,
+  NotificationToHost,
+  DispatchedToHost,
+  CollectedBy,
+  Dispatchedby,
+  Dispatchedtime,
+  NotifiedTime,
+  Notifiedby,
+  ReportedOn,
+  ReportedBy,
+  DispatchedFacility from ClientRequestDetails 
+	where RequestID = @RequestID and VisitorID = @VisitorID and ParentRefernceID = @ParentID
+END
