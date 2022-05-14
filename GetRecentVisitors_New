@@ -1,0 +1,77 @@
+CREATE PROCEDURE [dbo].[GetRecentVisitors_New]
+(
+       @HostId Varchar(50),
+       @Count int
+)      
+AS
+BEGIN
+
+SET NOCOUNT ON 
+
+BEGIN TRY
+BEGIN TRAN
+
+       DECLARE @ErrorMessage VARCHAR(8000);
+       DECLARE @ErrorSeverity INT;
+       DECLARE @ErrorState INT;
+
+       
+       --SELECT Distinct TOP (@Count) vm.FirstName AS VisitorFullName
+       --,vm.MasterVisitorID  AS VisitorId,
+       --MAX(RequestID) AS RequestId, 
+       --CASE vm.CreatedBy WHEN @HostId THEN 1 ELSE 0 END AS IsEditable,
+       --vm.Company,
+       --vm.MobileNo,vm.VisitorType,Vr.PermitITEquipments,Vr.CreatedDate,
+       --RANK() OVER (PARTITION BY vm.MasterVisitorID  ORDER BY Vr.CreatedDate DESC) as Rank into #TempTable
+       --FROM   dbo.VisitorRequest vr WITH (NOLOCK)
+       --INNER JOIN dbo.MSTR_VisitorMaster vm WITH (NOLOCK)                       
+       --       ON vr.MasterVisitorID = vm.MasterVisitorID 
+       ----WHERE  hostid LIKE  '%' + @HostId + '%' 
+       --WHERE  HostAssociateID = @HostId  AND
+       --(ExternalRequestCameFrom is null OR ExternalRequestCameFrom in ('ClientVisit','AMSVisa','Onboarding'))
+       --GROUP  BY vm.MasterVisitorID,vm.firstname,vm.CreatedBy,vm.Company,vm.MobileNo,vm.VisitorType,Vr.PermitITEquipments,Vr.CreatedDate
+       --ORDER  BY RequestID DESC
+
+       --select VisitorFullName,VisitorId,RequestId,IsEditable,Company,MobileNo,VisitorType,PermitITEquipments from #TempTable
+       --where Rank=1
+
+       --       drop table #TempTable
+
+	   	SELECT Distinct TOP (@Count) vm.FirstName AS VisitorFullName
+       ,vm.MasterVisitorID  AS VisitorId,
+       --MAX(RequestID) AS 
+	   --RequestId, 
+       ---CASE vm.CreatedBy WHEN '445894' THEN 1 ELSE 0 END AS IsEditable,
+       vm.Company,
+       vm.MobileNo,vm.VisitorType,Vr.PermitITEquipments
+	   --,Vr.CreatedDate
+       FROM   dbo.VisitorRequest vr WITH (NOLOCK)
+       INNER JOIN dbo.MSTR_VisitorMaster vm WITH (NOLOCK)                       
+              ON vr.MasterVisitorID = vm.MasterVisitorID 
+       --WHERE  hostid LIKE  '%' + @HostId + '%' 
+       WHERE  HostAssociateID = @HostId  AND
+       (ExternalRequestCameFrom is null OR ExternalRequestCameFrom in ('ClientVisit','AMSVisa','Onboarding','BS'))
+       GROUP  BY vm.MasterVisitorID,vm.firstname,vm.CreatedBy,vm.Company,vm.MobileNo,vm.VisitorType,Vr.PermitITEquipments
+	   --,Vr.CreatedDate
+       ORDER  BY VM.MasterVisitorID DESC
+
+
+COMMIT TRAN
+END TRY
+BEGIN CATCH
+ROLLBACK TRAN
+       IF (@@ERROR <> 0)
+       BEGIN  
+              SELECT
+              @ErrorMessage =ERROR_MESSAGE(),
+              @ErrorSeverity = ERROR_SEVERITY(),
+              @ErrorState = ERROR_STATE();
+
+              RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+       END
+END CATCH
+RETURN 1 
+
+SET NOCOUNT OFF;     
+
+END
