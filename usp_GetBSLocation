@@ -1,0 +1,10 @@
+CREATE PROCEDURE [dbo].[usp_GetBSLocation](@BSLocationID int)
+       
+AS    
+BEGIN
+SET NOCOUNT ON
+       Select LocationID,LocationName from tbl_BSLocationMaster where BSLocationID=@BSLocationID and IsActive=1
+
+SET NOCOUNT OFF;    
+END
+
