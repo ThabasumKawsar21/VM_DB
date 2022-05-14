@@ -1,0 +1,16 @@
+CREATE TABLE [dbo].[MSTR_VisitorEquipments_Backup](
+[ID] [int] IDENTITY(1,1) NOT NULL,
+	[MasterVisitorEquipmentID] [int] NOT NULL,
+	[MasterVisitorID] [int] NULL,
+	[MasterDataID] [int] NOT NULL,
+	[Make] [varchar](50) NULL,
+	[Model] [varchar](50) NULL,
+	[SerialNo] [varchar](50) NULL,
+	[Others] [varchar](50) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 80) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
