@@ -1,0 +1,69 @@
+CREATE PROCEDURE [dbo].[InsertAccessCardNumber]
+	@RequestID int,	
+	@VisitorID int,
+	@VisitorName varchar(50),
+	@AccessCardNumber int,
+	@VcardNumber varchar(18),
+	@badgestatus varchar(50)
+
+
+	
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+DECLARE @ParentID int;
+
+SET @ParentID = (Select ParentReferenceId from VisitorRequest where requestid=@requestid)
+
+IF EXISTS (select requestid from ClientRequestDetails where requestid= @RequestID)
+UPDATE ClientRequestDetails SET AccessCardNumber=@AccessCardNumber , VcardNumber = UPPER(@VcardNumber) where 
+--RequestID=@RequestID
+parentrefernceid = @ParentID 
+  and VisitorID=@VisitorID  
+
+
+ ELSE
+
+  INSERT INTO ClientRequestDetails (RequestID,VisitorID,ParentRefernceID,VisitorName)
+  (Select VR.RequestID,VR.VisitorID,VR.ParentReferenceId,VM.firstname 
+  from VisitorRequest VR 
+  join Visitormaster VM on VR.visitorID = Vm.VisitorID
+  where ParentReferenceId=@ParentID)
+  --VALUES (@RequestID,@VisitorID,@ParentID,@VisitorName,@AccessCardNumber)
+
+  update ClientRequestDetails SET AccessCardNumber = @AccessCardNumber, VcardNumber = UPPER(@VcardNumber) where parentrefernceid = @ParentID 
+  and VisitorID=@VisitorID  
+
+ UPDATE VisitDetails 
+			SET BadgeStatus=@badgestatus, LastUpdatedDate=GETDATE()
+			where 
+			--DATE = convert (date, getdate()) and 
+ RequestID in (select requestid from visitorrequest where parentreferenceid=@ParentID and visitorID=@VisitorID)
+
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
+
