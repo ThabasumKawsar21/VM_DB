@@ -1,0 +1,9 @@
+CREATE PROCEDURE [dbo].[GetAllCountryDetails]
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+
+	 Select Country, Code as Code,CountryId as CountryId,0 as Rank from CountryCode WITH (NOLOCK)
+
+END
