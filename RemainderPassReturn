@@ -1,0 +1,21 @@
+
+CREATE PROCEDURE [dbo].[RemainderPassReturn]
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	select distinct(CRD.ParentrefernceID),VR.todate,
+	DATEDIFF(hour, VR.ToDate,getdate()) as datedifference,
+CRD.RemainderPassReturn,VR.HostID,VR.Facility
+ from ClientRequestDetails CRD 
+ join VisitorRequest VR on CRD.parentrefernceID = VR.ParentreferenceID
+ where 
+NotificationToHost=1 and DispatchedToHost =1 and VR.RequestStatus = 'IN'
+END
+
+	
