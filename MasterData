@@ -1,0 +1,7 @@
+CREATE TABLE [dbo].[MasterData] (
+    [MasterDataID]          INT           NOT NULL,
+    [MasterDataType]        VARCHAR (100) NULL,
+    [MasterDataDescription] VARCHAR (100) NULL,
+    [DisplayOrder]          INT           NULL,
+    CONSTRAINT [PK_MasterData] PRIMARY KEY CLUSTERED ([MasterDataID] ASC) WITH (FILLFACTOR = 80)
+);
