@@ -1,0 +1,34 @@
+CREATE PROCEDURE [dbo].[BatchUpdateDCID]
+	-- Add the parameters for the stored procedure here
+	@DCUniqueID int,
+	@DCTempUnqiueID int,
+	@VMSRequestID int 
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	BEGIN TRY
+	BEGIN TRAN
+	DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+Update DC_Status set DCUnique_Id = @DCUniqueID where TempUnique_Id = @DCTempUnqiueID and RequestID_VMS = @VMSRequestID
+
+	COMMIT TRAN
+	END TRY
+    
+	BEGIN CATCH
+	ROLLBACK TRAN
+	IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+	END CATCH
+END
+
