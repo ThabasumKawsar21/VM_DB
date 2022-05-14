@@ -1,0 +1,7 @@
+CREATE TABLE [dbo].[tbl_BS_Updates]
+(
+	[Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, 
+    [BS_id] INT NULL, 
+    [Updatetime] VARCHAR(100) NULL, 
+    [MailFlag] INT NULL
+)
