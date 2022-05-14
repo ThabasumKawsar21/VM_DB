@@ -1,0 +1,76 @@
+CREATE TABLE [dbo].[VisitorRequest] (
+    [RequestID]               INT           IDENTITY (1, 1) NOT NULL,
+    [RequestedDate]           DATETIME      NOT NULL,
+    [VisitorID]               INT           NOT NULL,
+    [Country]                 VARCHAR (50)  NULL,
+    [City]                    VARCHAR (50)  NULL,
+    [Facility]                VARCHAR (100) NULL,
+    [Purpose]                 VARCHAR (200) NULL,
+    [HostID]                  VARCHAR (200) NULL,
+    [HostContactNo]           VARCHAR (20)  NULL,
+    [FromDate]                DATE          NULL,
+    [ToDate]                  DATE          NULL,
+    [FromTime]                TIME (7)      NULL,
+    [ToTime]                  TIME (7)      NULL,
+    [RequestStatus]           VARCHAR (50)  NULL,
+    [RecurrencePattern]       VARCHAR (50)  NULL,
+    [Occurence]               VARCHAR (100) NULL,
+    [Comments]                VARCHAR (500) NULL,
+    [Createdby]               VARCHAR (50)  NULL,
+    [CreatedDate]             DATETIME      NULL,
+    [LastUpdatedby]           VARCHAR (50)  NULL,
+    [LastUpdatedDate]         DATETIME      NULL,
+    [HostDepartment]          VARCHAR (100) NULL,
+    [Status]                  VARCHAR (20)  NULL,
+    [PermitITEquipments]      BIT           NULL,
+    [IPAddress]               VARCHAR (30)  NULL,
+    [ParentReferenceId]       INT           NULL,
+    [ISSMSEnabled]            BIT           DEFAULT ((0)) NULL,
+    [BulkUpload]              BIT           NULL,
+    [ExternalRequestCameFrom] VARCHAR (20)  NULL,
+    [ExternalRequestId]       INT           NULL,
+    [PermitId]                INT           NULL,
+    [SafetyPermitType]        VARCHAR (50)  NULL,
+    [BuddyId]                 VARCHAR (50)  NULL,
+    [LocationId]              INT           NULL,
+    [OutlookNotfication]      BIT           NULL,
+    [MailGuid]                VARCHAR (200) NULL,
+    [IsEquipmentInCustody]    BIT           NULL,
+    [ContractorCount]         INT           NULL,
+    [SafetyPermitTypeId]      INT           NULL,
+    [Offset]                  VARCHAR (50)  NULL,
+    [MasterVisitorId]         INT           NULL,
+    [BJMailFlag]              BIT           NULL,
+    [HostAssociateID]         VARCHAR (11)  NULL,
+    CONSTRAINT [PK_VisitorRequest_1] PRIMARY KEY CLUSTERED ([RequestID] ASC) WITH (FILLFACTOR = 80,PAD_INDEX = ON),
+    CONSTRAINT [FK_VisitorRequest_VisitorRequest] FOREIGN KEY ([RequestID]) REFERENCES [dbo].[VisitorRequest] ([RequestID])
+);
+
+
+GO
+CREATE NONCLUSTERED INDEX [NCIDX_Purpose]
+    ON [dbo].[VisitorRequest]([Purpose] ASC)
+    INCLUDE([RequestID], [VisitorID], [ParentReferenceId]);
+
+
+GO
+CREATE NONCLUSTERED INDEX [NonClusteredIndex-HostAssociateID]
+    ON [dbo].[VisitorRequest]([HostAssociateID] ASC);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_VisitorRequest]
+    ON [dbo].[VisitorRequest]([VisitorID] ASC, [RequestID] ASC)
+    INCLUDE([HostID]) WITH (FILLFACTOR = 80);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_VisitorRequest_ParentReferenceId_BulkUpload]
+    ON [dbo].[VisitorRequest]([ParentReferenceId] ASC, [BulkUpload] ASC)
+    INCLUDE([RequestID], [VisitorID], [Purpose], [HostID], [FromTime], [Status], [LocationId], [Offset]) WITH (FILLFACTOR = 90);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_VisitorRequest_HostID_ExternalRequestCameFrom]
+    ON [dbo].[VisitorRequest]([HostID] ASC, [ExternalRequestCameFrom] ASC)
+    INCLUDE([RequestID], [VisitorID]) WITH (FILLFACTOR = 90);
