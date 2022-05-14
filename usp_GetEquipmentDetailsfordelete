@@ -1,0 +1,14 @@
+CREATE PROCEDURE [dbo].[usp_GetEquipmentDetailsfordelete](@VisitorID int) 
+	-- Add the parameters for the stored procedure here
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	SELECT MD.MasterDataDescription,VE.Make,VE.Model,VE.SerialNo,MD.MasterDataID,VE.VisitorEquipmentID,VE.VisitDetailsID 
+	from VisitorEquipments VE inner join VisitDetails VD on VE.VisitDetailsID=VD.VisitDetailsID
+	inner join MasterData MD on VE.MasterDataID=MD.MasterDataID where VE.VisitDetailsID=@VisitorID
+END
