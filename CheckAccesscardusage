@@ -1,0 +1,29 @@
+CREATE PROCEDURE [dbo].[CheckAccesscardusage]
+	@accesscardnumber int
+
+AS
+    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+
+select requeststatus,CD.accesscardnumber,CD.requestID,CD.ParentRefernceID,VD.badgestatus
+ from visitorrequest VR 
+join ClientRequestDetails CD on CD.requestid = VR.RequestID
+join Visitdetails VD on VD.requestid=CD.requestid
+where CD.accesscardnumber=@accesscardnumber
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+ROLLBACK TRANSACTION
+		DECLARE @ErrorMessage varchar(2000) = CONVERT(varchar(2000),OBJECT_NAME(@@PROCID)+':'+ ERROR_MESSAGE() )
+		
+END CATCH	
+END
