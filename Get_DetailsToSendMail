@@ -1,0 +1,57 @@
+
+-- =============================================
+-- Author:		Ramkumar Asath
+-- Create date: 27th December 2017
+-- Description:	Fetch details for sending mails via Batch Job
+--exec Get_DetailsToSendMail
+-- =============================================
+CREATE PROCEDURE [dbo].[Get_DetailsToSendMail]
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	BEGIN TRY
+	BEGIN TRAN
+	DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+SELECT VR.Createdby,VM.EmailID,REPLACE(VM.FirstName,'&',' and ') as FirstName,REPLACE(VM.Company,'&',' and ') as Company,VR.Facility,VR.City,VR.Purpose,VR.FromDate,VR.ToDate,VR.FromTime,VR.Totime,
+VR.RequestID,VR.RecurrencePattern,VR.Occurence,VR.OutlookNotfication,VR.HostID,VR.LocationId,'CTS' AS LocationAddress,
+VM.MobileNo,VR.MailGuid,VR.BulkUpload,VR.ParentReferenceId,VR.RequestedDate,
+ (SELECT cast(count(VisitorRequest.ParentReferenceId)AS  varchar(1000))FROM
+ VisitorRequest WITH (NOLOCK) WHERE VisitorRequest.BulkUpload=1 and VisitorRequest.ParentReferenceId is not null
+ and VisitorRequest.ParentReferenceId = VR.RequestID 
+ --group by VisitorRequest.ParentReferenceId
+ )  
+  as BulkCount
+from VisitorRequest VR 
+join VisitorMaster VM on VM.VisitorID = VR.VisitorId
+join TblLocationMaster LM on LM.LocationId = VR.LocationId or VR.Facility = LM.CountryCityFacility
+where BJMailFlag = 0 and VR.ExternalRequestCameFrom is NULL
+order by VR.RequestedDate asc
+
+
+
+
+	COMMIT TRAN
+	END TRY
+    
+	BEGIN CATCH
+	ROLLBACK TRAN
+	IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+	END CATCH
+
+
+	
+END
