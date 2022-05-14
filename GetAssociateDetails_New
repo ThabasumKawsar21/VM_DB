@@ -1,0 +1,65 @@
+CREATE PROCEDURE [dbo].[GetAssociateDetails_New]    
+ (    
+ @AssociateId Varchar(11)    
+ )     
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+SELECT TOP 1    
+Associate.Associate_FirstName as FirstName    
+,Associate.Associate_LastName as LastName    
+,Associate.Associate_MiddleInitial as MiddleName    
+,Associate.EMail_ID as EmailID    
+,Department.Dept_Desc as Department    
+--,Associate.Gender as Gender    
+,Associate.JobCode as JobCode    
+--,desg.GradeCode as Grade,    
+,LLMS.CountryCode as CountryID,
+tbl.FacilityCode
+,tbl.LocationID as LocationID    
+,tbl.LocationName as Facility    
+,tbl.LocationCity as City,
+CONCAT(RTRIM(LTRIM(Associate_FirstName)),' ', RTRIM(LTRIM(Associate_LastName)),' ','(',RTRIM(LTRIM(Associate.Associate_ID)),')') as AssociateName,
+tbl.CountryCityFacility
+
+--tbl.LocationImage    
+,COALESCE((SELECT TOP 1 Value FROM  [CentralRepository].dbo.vw_CentralRepository_contacts WITH 
+                                                               (NOLOCK) Where Associate_ID = Associate.Associate_ID AND Contact_Type like '%MBL%' ),'') as MobileNo    
+FROM  [CentralRepository].dbo.vw_CentralRepository_Associate_Details Associate WITH (NOLOCK)    
+LEFT JOIN  [CentralRepository].dbo.vw_CentralRepository_Department Department WITH (NOLOCK) ON
+                                  Associate.Dept_ID =Department.Dept_ID    
+LEFT JOIN  [CentralRepository].[dbo].[vw_CentralRepository_GSMS_AssociateSeatInfo] SeatInfo WITH (NOLOCK) ON 
+                                  Associate.Associate_ID = SeatInfo.Associate_ID
+LEFT JOIN dbo.tblLocationMapping tblm WITH (NOLOCK) on 
+                                    tblm.HCMLocationCode= COALESCE(SeatInfo.HCMLocationCode,PresentHCMLocationCode)    
+LEFT JOIN dbo.TblLocationMaster tbl WITH (NOLOCK) on
+                                     tbl.LocationId=tblm.LocationID  AND tbl.Status='A'
+                                                              Left Join [CentralRepository].[dbo].[vw_CentralRepository_LocationMaster_Locationmaster] LLMS
+                                                              on SeatInfo.HCMLocationCode=LLMS.LocationCode
+  WHERE Associate.Associate_id=@AssociateId
+
+END TRY
+
+BEGIN CATCH
+
+IF (@@ERROR <> 0)
+BEGIN  
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH     
+
+RETURN 1 
+SET NOCOUNT OFF;     
+END
