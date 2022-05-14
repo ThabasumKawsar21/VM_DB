@@ -1,0 +1,37 @@
+CREATE PROCEDURE [dbo].[GetCountrybyCity]
+@City VARCHAR(50) =NULL	
+	
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+    -- Insert statements for procedure here
+	SELECT DISTINCT Country FROM CountryCode cc WITH (NOLOCK)
+	RIGHT JOIN  dbo.TblLocationMaster lm WITH (NOLOCK)
+	ON lm.CountryId= cc.CountryId
+	WHERE LocationCity = @City
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
