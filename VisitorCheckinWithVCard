@@ -1,0 +1,81 @@
+CREATE PROCEDURE [dbo].[VisitorCheckinWithVCard](
+@VisitDetails int,
+@ModifiedBy varchar(50),
+@VcardNo varchar(50),
+@AccessCardNo int
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @RequestId int;
+DECLARE @ParentID int;
+DECLARE @CollectedBy int;
+-- BEGIN ChangeLog1
+SET @RequestId = (SELECT TOP 1 RequestID FROM VisitDetails WHERE VisitDetailsID = @VisitDetails)
+-- END ChangeLog1
+			
+			UPDATE VisitDetails 
+			SET BadgeNo=@VcardNo, BadgeIssuedDate=GETDATE(), BadgeStatus='issued', IssuedBy=@ModifiedBy, LastUpdatedDate=GETDATE() 
+			WHERE VisitDetailsID = @VisitDetails
+			
+			UPDATE VisitorRequest
+			SET RequestStatus='IN', LastUpdatedby=@ModifiedBy, LastUpdatedDate=GETDATE() 
+			WHERE RequestID=@RequestId
+
+-- BEGIN ChangeLog1
+			IF(@AccessCardNo <> 0)
+			BEGIN
+			SET @ParentID = (Select ParentReferenceId from VisitorRequest where requestid=@RequestId)
+			set @CollectedBy =   (SELECT
+               SUBSTRING(HostID,
+              CHARINDEX('(', HostID) + 1,
+              CHARINDEX(')', HostID) - CHARINDEX('(', HostID) - 1) 
+              FROM VisitorRequest where RequestID = @RequestId)
+			IF NOT EXISTS (select requestid from ClientRequestDetails where requestid= @RequestId)
+			INSERT INTO ClientRequestDetails (RequestID,VisitorID,ParentRefernceID,VisitorName,Dispatchedtime,CollectedBy,DispatchedFacility)
+				(
+				 SELECT 
+				 VR.RequestID,
+				VR.VisitorID,
+				VR.ParentReferenceId,
+				VM.firstname,
+				getdate() ,
+				@CollectedBy,
+				VR.Facility
+				FROM VisitorRequest VR 
+				JOIN Visitormaster VM 
+				ON VR.visitorID = Vm.VisitorID
+				WHERE ParentReferenceId=@ParentID)
+
+			UPDATE ClientRequestDetails SET AccessCardNumber=@AccessCardNo , VcardNumber = UPPER(@VcardNo) where 
+			parentrefernceid = @ParentID
+			and VisitorID=(Select VisitorID from VisitorRequest where requestid=@RequestId)  
+			END
+-- END ChangeLog1	
+		
+			SELECT 1 AS IsFirst 
+		
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH
+RETURN 1 
+SET NOCOUNT OFF;	
+END
