@@ -1,0 +1,10 @@
+CREATE PROCEDURE [dbo].[usp_UpdateBSTime]
+	@BS_id int ,
+	@Updatetime varchar(100),
+	@MailFlag int
+AS
+begin
+SET NOCOUNT ON
+	update tbl_BS_Updates set Updatetime = @Updatetime,MailFlag = @MailFlag where BS_id = @BS_id
+	SET NOCOUNT off
+end 
