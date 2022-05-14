@@ -1,0 +1,78 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- =============================================
+-- Author:		Joju George
+-- Create date: 14/05/2019
+-- Get CardLog details
+-- =============================================
+CREATE PROCEDURE [dbo].[GetCardLog]
+	@visitDetailsId VARCHAR (50)
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+
+	DECLARE @ReqID INT;
+	DECLARE @Issueddate datetime;
+	DECLARE @RowCount INT;
+
+set @RowCount = (Select count(Badgeno) from ReissuedCardDetails  where VisitDetailsID = @visitDetailsId)
+if @RowCount >= 1
+	begin
+	SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @visitDetailsId)
+   Select Date, Badgeno,
+   LastUpdatedDate AS  BadgeIssuedDate,   
+  BadgeStatus,
+  case when BadgeStatus!='issued' then LastUpdatedDate
+  else
+  null
+  end as ReportedDate
+    from VisitDetails where RequestID=@ReqID and BadgeNo is not null
+	UNION
+	Select Date, Badgeno,BadgeIssuedDate,BadgeStatus,
+  case when BadgeStatus!='issued' then LastUpdatedDate
+  else
+  null
+  end as ReportedDate
+    from ReissuedCardDetails where RequestID=@ReqID and BadgeNo is not null
+	END 
+	else
+	begin
+		SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @visitDetailsId)
+  Select Date, Badgeno,BadgeIssuedDate,BadgeStatus,
+  case when BadgeStatus!='issued' then LastUpdatedDate
+  else
+  null
+  end as ReportedDate
+    from VisitDetails where RequestID=@ReqID and BadgeNo is not null
+	UNION
+	Select Date, Badgeno,LastUpdatedDate,BadgeStatus,
+  case when BadgeStatus!='issued' then LastUpdatedDate
+  else
+  null
+  end as ReportedDate
+    from ReissuedCardDetails where RequestID=@ReqID and BadgeNo is not null
+
+	end
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
