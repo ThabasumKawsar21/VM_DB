@@ -1,0 +1,188 @@
+CREATE   PROCEDURE [dbo].[TrackDetails_LocationID] 
+
+     (      
+
+ @Search VARCHAR(100) =NULL  ,
+
+ @FromDate DATE  =NULL ,
+
+ @ToDate DATE  =NULL,
+
+ @HostID  VARCHAR(20)    
+
+   
+
+)        
+
+AS      
+
+BEGIN      
+
+	SET NOCOUNT ON      
+
+	DECLARE @SQL varchar(4000)      
+
+	DECLARE @TEMPSQL varchar(1000)      
+
+	DECLARE @NumberRecords int, @RowCount int
+
+	DECLARE @Word VARCHAR(100)
+
+	DECLARE @Query varchar(1000)
+
+	 DECLARE   @BulkUpload VARCHAR(100)
+
+	 DECLARE @SQL1 varchar(1500)  
+
+	 DECLARE @count varchar(1500)          
+
+	SET @Query='FirstName LIKE REPLACE('''+ '%' + @Word+ '%' + ''',''%-1%'',''%%'')'
+
+ print @Query
+
+	 CREATE TABLE #SeachEntry 
+
+		(
+
+			RowID int IDENTITY(1, 1), 
+
+			SearchWord VARCHAR(100)
+
+		)
+
+	insert into 
+
+	#SeachEntry(SearchWord)
+
+		select value from dbo.fn_UDF_SplitCharacter(@Search,' ')
+
+		
+
+	SET @NumberRecords = @@ROWCOUNT
+
+	SET @RowCount = 1
+
+
+	WHILE @RowCount <= @NumberRecords
+
+		BEGIN
+
+			SELECT @Word=SearchWord
+
+			FROM #SeachEntry
+
+			WHERE RowID = @RowCount
+
+		    if(@RowCount=1)
+
+			SET @Query='FirstName LIKE REPLACE('''+ '%' + @Word+ '%' + ''',''%-1%'',''%%'')
+
+ OR Company LIKE  REPLACE('''+ '%' + @Word+'%' + ''',''%-1%'',''%%'')
+
+ OR MobileNo LIKE  REPLACE('''+ '%' + @Word+'%' + ''',''%-1%'',''%%'')'
+
+            else
+
+			SET @Query=@Query+' OR FirstName LIKE REPLACE(''%'+@Word+'%'',''%-1%'',''%%'')
+
+
+ OR Company LIKE  REPLACE(''%'+@Word+'%'',''%-1%'',''%%'')
+
+ OR MobileNo LIKE REPLACE(''%'+@Word+'%'',''%-1%'',''%%'')'
+
+
+
+			SET @RowCount = @RowCount + 1
+
+			 
+
+		END
+
+		-- Drop the temporary table
+
+		DROP TABLE #SeachEntry  
+
+		
+
+		       SET @SQL =	 ';WITH T as( SELECT
+
+		                   case 
+
+                           when (Vr.BulkUpload=1 AND Vr.ParentReferenceId=Vr.RequestID)
+
+                           then  ''Bulk Entries''
+
+                           else (FirstName) 			               
+
+			               end as Name,
+
+				Company AS Company, 
+
+				Vr.Purpose AS VisitorType,
+
+				Vr.Facility AS VisitLocation,
+
+				CONVERT(VARCHAR,Vd.Date,101) AS [Date] ,Vr.FromTime AS [Time],dc.DCStatus AS DCStatus,dc.TempUnique_Id AS tempdcid,
+
+				Vr.RequestID AS RequestID,
+
+				Vd.VisitDetailsID AS VisitDetailsID,
+
+				coalesce(vd.BadgeStatus,''NA'') AS BadgeStatus,
+
+				Vr.Status AS Status,Vr.BulkUpload AS BulkUpload,Vr.ParentReferenceId AS ParentReferenceId,
+
+				Vr.Offset AS Offset,
+				Vr.VisitorId AS VisitorID,
+				Vr.RequestStatus AS RequestStatus,
+				vd.ActualOutTime AS ActualOutTime,
+				vd.BadgeIssuedDate AS ActualInTime,
+				Vr.ToTime
+
+			FROM VisitorMaster Vm WITH (NOLOCK)  
+
+			JOIN VisitorRequest Vr WITH (NOLOCK) ON  Vm.VisitorId= Vr.VisitorId 
+
+			JOIN VisitDetails Vd WITH (NOLOCK) ON Vd.RequestID=Vr.RequestID	
+
+
+			FULL OUTER JOIN DC_Status dc WITH (NOLOCK) ON dc.VisitorId=Vr.VisitorId
+
+			WHERE
+
+			('
+
+		  
+
+			SET @SQL =@SQL+@Query +')     AND Vd.Date BETWEEN '''+CONVERT(VARCHAR,@FromDate,0)+''' AND '''+CONVERT(VARCHAR,@ToDate,0)+''' AND Vr.HostAssociateID LIKE ''%'+@HostID+'%'''+
+		
+
+			 'GROUP BY Company,Vr.Purpose,Vr.Facility,Vd.Date,Vr.FromTime,Vr.RequestID,
+
+				Vd.VisitDetailsID,vd.BadgeStatus,Vr.Status,Vr.BulkUpload ,ParentReferenceId,Vr.VisitorID,Vr.RequestStatus,FirstName,Vr.Offset,dc.DCStatus,dc.TempUnique_Id,vd.ActualOutTime,vd.BadgeIssuedDate,Vr.ToTime)'	
+
+			SET @SQL =@SQL+ 'select TOP 100 Name,Company,VisitorType,VisitLocation,[Date],[Time],DCStatus,tempdcid,RequestID,VisitDetailsID,BadgeStatus,Status,BulkUpload,ParentReferenceId,Offset,VisitorID,RequestStatus,ActualOutTime,ActualInTime,ToTime
+			from (select  Name,Company,VisitorType,VisitLocation,[Date],[Time],DCStatus,tempdcid,RequestID,VisitDetailsID,BadgeStatus,Status,BulkUpload,ParentReferenceId,Offset,VisitorID,RequestStatus,ActualOutTime,ActualInTime,ToTime from T where T.BulkUpload=1  and ParentReferenceId=RequestId '
+
+			SET @SQL =@SQL+ ' union'
+
+			SET @SQL =@SQL+' select Name,Company,VisitorType,VisitLocation,[Date],[Time],DCStatus,tempdcid,RequestID,VisitDetailsID,BadgeStatus,Status,BulkUpload,ParentReferenceId,Offset,VisitorID,RequestStatus,ActualOutTime,ActualInTime,ToTime from T where T.BulkUpload=0  ) a ORDER BY Date, Time'
+
+			
+
+	 
+
+			
+
+      
+
+		 print @SQL   
+
+
+		EXEC(@SQL) 
+
+    
+
+     	--DROP TABLE #Seach
+
+END
