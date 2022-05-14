@@ -1,0 +1,19 @@
+
+CREATE PROCEDURE [dbo].[usp_Getrequestdata](@BSID int)
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       declare @VisitornewID int=(select Top 1 MasterVisitorID from MSTR_VisitorMaster where BSID=@BSID order by 1 desc)
+       declare @visitoroldID int=(select Top 1 VisitorID from VisitorMaster where D_MasterVisitorID=@VisitornewID order by 1 desc)
+       declare @visitorrequestID int=(select top 1 RequestID from VisitorRequest where VisitorID=@visitoroldID order by 1 desc)
+       declare @visitdetailsID int=(select top 1 VisitDetailsID from VisitDetails where RequestID=@visitorrequestID order by 1 desc)
+
+       select @VisitornewID as MasterVisitorID,@visitoroldID as VisitorID,@visitorrequestID as RequestID,@visitdetailsID as VisitdetailsID
+END 
+ 
+
