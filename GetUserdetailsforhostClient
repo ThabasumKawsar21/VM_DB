@@ -1,0 +1,43 @@
+CREATE PROCEDURE [dbo].[GetUserdetailsforhostClient]
+
+ @AssociateId  varchar(10)= null,
+	@AssociateName  varchar(10)= null
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	if(@AssociateId is not null)
+	begin
+    -- Insert statements for procedure here
+	
+				  SELECT distinct ltrim(rtrim(AD.Associate_ID)) AssociateId, 
+ltrim(rtrim(AD.Associate_FirstName))+', '+ltrim(rtrim(AD.Associate_LastName)) AssociateName,
+CONCAT(RTRIM(LTRIM(AD.Associate_FirstName)),' ', RTRIM(LTRIM(AD.Associate_LastName)),' ','(',RTRIM(LTRIM(AD.Associate_ID)),')') as AssociateIdName,
+COALESCE((SELECT TOP 1 Value FROM  [CentralRepository].dbo.vw_CentralRepository_contacts WITH (NOLOCK) Where Associate_ID = AD.Associate_id AND Contact_Type like '%MBL%' ),'') as Phone_Home1
+from CentralRepository.dbo.vw_CentralRepository_Associate_Details AD
+	inner join [CentralRepository].[dbo].[vw_CentralRepository_Designation] D on AD.JobCode=D.JobCode
+	where (AD.Associate_ID =@AssociateId)and 
+	Replace(Replace(Replace(Replace(Replace(Replace(Replace(SUBSTRING(GradeCode,2,3),'C',''),'B',''),'I',''),'A',''),'D',''),'E',''),'F','')<=50
+	and AD.IsActive='A' and Left(D.JobCode,3) != 'CWR'
+	order by AssociateName ASC
+	end
+	else
+	begin
+	 SELECT distinct ltrim(rtrim(AD.Associate_ID)) AssociateId, 
+ltrim(rtrim(AD.Associate_FirstName))+', '+ltrim(rtrim(AD.Associate_LastName)) AssociateName,
+CONCAT(RTRIM(LTRIM(AD.Associate_FirstName)),' ', RTRIM(LTRIM(AD.Associate_LastName)),' ','(',RTRIM(LTRIM(AD.Associate_ID)),')') as AssociateIdName,
+COALESCE((SELECT TOP 1 Value FROM  [CentralRepository].dbo.vw_CentralRepository_contacts WITH (NOLOCK) Where Associate_ID = AD.Associate_id AND Contact_Type like '%MBL%' ),'') as Phone_Home1
+from CentralRepository.dbo.vw_CentralRepository_Associate_Details AD
+	inner join [CentralRepository].[dbo].[vw_CentralRepository_Designation] D on AD.JobCode=D.JobCode
+	where (AD.Associate_FirstName like '%'+@AssociateName+'%' OR AD.Associate_LastName like '%'+@AssociateName+'%')and 
+	Replace(Replace(Replace(Replace(Replace(Replace(Replace(SUBSTRING(GradeCode,2,3),'C',''),'B',''),'I',''),'A',''),'D',''),'E',''),'F','')<=50
+	and AD.IsActive='A' and Left(D.JobCode,3) != 'CWR'
+	order by AssociateName ASC
+	end
+
+
+END
