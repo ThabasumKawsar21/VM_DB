@@ -1,0 +1,43 @@
+CREATE PROCEDURE [dbo].[getvisitdetails_Clients]
+	@parentid int,
+	@visitorid int
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+--	select requestid,visitorid,ParentReferenceId,facility,FORMAT(FromDate,'dd/MM/yyyy' )AS FromDate ,CONVERT(VARCHAR, FromTime, 100) AS FromTime,FORMAT(ToDate,'dd/MM/yyyy' )AS ToDate,CONVERT(VARCHAR, ToTime, 100) AS ToTime,hostid from visitorrequest where 
+--ParentReferenceId=@parentid and VisitorID=@visitorid
+
+	select distinct VR.facility, VR.requestid,VR.visitorid,VR.ParentReferenceId,FORMAT(VR.FromDate,'dd/MM/yyyy' )AS FromDate ,CONVERT(VARCHAR, Vr.FromTime, 100) AS FromTime,
+	FORMAT(Vr.ToDate,'dd/MM/yyyy' )AS ToDate,CONVERT(VARCHAR, VR.ToTime, 100) AS ToTime,VR.hostid, FORMAT(VD.Date,'dd/MM/yyyy' )AS VisitDate
+	
+	from visitorrequest VR 
+	join VisitDetails VD on VD.RequestID=VR.RequestID
+	where 
+    (ParentReferenceId=@parentid or VR.Requestid=@parentid) and VisitorID=@visitorid order by VisitDate
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
