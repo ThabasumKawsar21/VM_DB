@@ -1,0 +1,11 @@
+CREATE TABLE [dbo].[MSTR_VisitorProof_Backup](
+	[MasterVisitorID] [int] NOT NULL,
+	[Photo] [varchar](800) NULL,
+	[FileContentId] [varchar](100) NULL,
+ CONSTRAINT [PK_MSTRVisitorProof_Backup] PRIMARY KEY CLUSTERED 
+(
+	[MasterVisitorID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 90) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
