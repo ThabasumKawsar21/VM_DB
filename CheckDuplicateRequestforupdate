@@ -1,0 +1,45 @@
+
+CREATE PROCEDURE [dbo].[CheckDuplicateRequestforupdate]
+(
+@VisitorType varchar(100),
+@LocationName varchar(50),
+@Date varchar(5000),
+@StartTime varchar(50),
+@ToTime varchar(50),
+@Name Varchar(200),
+@Organization Varchar(200),
+@Mobilenumber Varchar(200),
+@RequestID Int
+)
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+Declare @MasterVisitorID int;
+Declare @Count int;
+Declare @DCount int;
+    -- Insert statements for procedure here
+
+	set @MasterVisitorID = (select MastervisitorID from MSTR_VisitorMaster where FirstName = @Name and Company = @Organization and MobileNo = @Mobilenumber);
+	set @DCount = (Select count(Date) from Visitdetails where RequestID = @RequestID)
+	if(@DCount = 1)
+	begin
+	set @Count = (select Count(1) from VisitorRequest where Purpose=@VisitorType and Facility=@LocationName and FromDate like '%'+@Date+'%' and FromTime=@StartTime and ToTime=@ToTime  and MasterVisitorId=@MasterVisitorID)
+	end
+	else
+	begin
+	(select Count(1) from VisitorRequest where Purpose=@VisitorType and Facility=@LocationName and  @Date  in (Select Date from Visitdetails where RequestID = @RequestID) and FromTime=@StartTime and ToTime=@ToTime  and MasterVisitorId=@MasterVisitorID )
+	end
+              
+			 
+			  
+              if(@Count=0 OR @Count is null)
+       begin
+              select 0 as CartID
+       end
+              else
+              begin
+              select 1 as CartID
+              end 
+END
