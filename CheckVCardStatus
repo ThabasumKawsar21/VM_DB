@@ -1,0 +1,64 @@
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- =============================================
+-- Author:		Joju George
+-- Create date:24/4/2019
+-- Description:	Check the VCard Status
+
+-- Modified by : Aiswarya Shankar
+-- Purpose:		 Added try - catch
+-- Modified On : 10-05-2019
+-- =============================================
+CREATE PROCEDURE  [dbo].[CheckVCardStatus] (
+
+--@ModifiedBy varchar(50),
+@VcardNo varchar(50),
+@status varchar(100) out
+)
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+IF EXISTS (SELECT BadgeNo from VisitDetails 
+where BadgeNo=@VcardNo and (BadgeStatus='Issued'))
+BEGIN
+	
+SET @status='This Card is not available';
+
+END
+ELSE
+BEGIN
+IF EXISTS (SELECT BadgeNo from ReissuedCardDetails 
+where BadgeNo=@VcardNo and (BadgeStatus='Lost'))
+BEGIN
+SET @status='This Card is not available';
+END
+ELSE
+BEGIN
+SET @status='Available'
+END
+END
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
