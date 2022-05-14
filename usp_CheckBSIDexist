@@ -1,0 +1,29 @@
+CREATE PROCEDURE usp_CheckBSIDexist(@BSID int)
+       -- Add the parameters for the stored procedure here
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       SELECT Top 1 [MasterVisitorID]
+      ,[VisitorReferenceNo]
+      ,[FirstName]
+      ,[LastName]
+      ,[Company]
+      ,[Designation]
+      ,[Country]
+      ,[MobileNo]
+      ,[EmailID]
+      ,[CreatedBy]
+      ,[CreatedDate]
+      ,[LastUpdatedBy]
+      ,[LastUpdateDate]
+      ,[Gender]
+      ,[IsConfidential]
+      ,[VisitorType]
+      ,[other] from MSTR_VisitorMaster where BSID=@BSID order by 1 desc
+END
+GO
