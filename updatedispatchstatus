@@ -1,0 +1,64 @@
+CREATE PROCEDURE [dbo].[updatedispatchstatus]   
+ -- Add the parameters for the stored procedure here  
+
+ @ParentRefernceID INT,
+ @collectedby int,
+ @Dispatchedby int
+ 
+ 
+AS  
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+  
+DECLARE @dispatchfacility varchar(50)
+  
+    -- Insert statements for procedure here  
+SET @dispatchfacility	=(select TOP 1 countrycityfacility from tbllocationmaster where locationid in (
+	select locationid from  vw_rolemapping_restrict where userid=@Dispatchedby))
+    -- Insert statements for procedure here  
+
+ 
+ update ClientRequestDetails set DispatchedToHost=1, collectedby=@collectedby, DispatchedBy=@Dispatchedby
+ ,Dispatchedtime=GETDATE(), DispatchedFacility=@dispatchfacility
+  WHERE ParentRefernceID=@ParentRefernceID
+-- (select requestid from VisitorRequest where ParentReferenceId=1746977)
+
+ UPDATE VisitDetails 
+			SET BadgeIssuedDate=GETDATE(), BadgeStatus='issued', IssuedBy=@Dispatchedby, LastUpdatedDate=GETDATE()
+			where 
+			--DATE = convert (date, getdate()) and 
+ RequestID in (select requestid from visitorrequest where parentreferenceid=@ParentRefernceID)
+
+
+
+ UPDATE VisitorRequest
+			SET RequestStatus='IN', LastUpdatedby=@Dispatchedby, LastUpdatedDate=GETDATE() 
+			--WHERE RequestID=(SELECT RequestID FROM VisitorRequest WITH (NOLOCK) WHERE ParentReferenceId = @ParentRefernceID)
+			WHERE ParentReferenceId = @ParentRefernceID
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
