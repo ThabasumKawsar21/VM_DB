@@ -1,0 +1,29 @@
+CREATE PROCEDURE usp_Checkalreadyexist(@VisitorType varchar(100),
+@MobileNo varchar(14),
+@Name varchar(50),
+@Organization varchar(50),
+@NativeCountry varchar(50),
+@LocationName varchar(50),
+@Date varchar(5000),
+@StartTime varchar(50),
+@ToTime varchar(50),
+@AssociateID varchar(10))
+
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+              Declare @Count int=(select Count(1) from tbl_VisitorCart where VisitorType=@VisitorType and MobileNo=@MobileNo and Organization=@Organization and VisitorName=@Name and NativeCountry=@NativeCountry and LocationName=@LocationName and Date like '%'+@Date+'%' and FromTime=@StartTime and ToTime=@ToTime and [Flag]=1 and AssociateID=@AssociateID )
+              if(@Count=0 OR @Count is null)
+       begin
+              select 0 as CartID
+       end
+              else
+              begin
+              select 1 as CartID
+              end 
+END
+GO
