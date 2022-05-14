@@ -1,0 +1,193 @@
+CREATE PROCEDURE [dbo].[SubmitVisitRequest_Multiple]
+(
+    @VisitorID udt_VMS_RequestList READONLY,
+	@Country VARCHAR(50),
+	@City VARCHAR(50),
+	@Facility VARCHAR(50),
+	@HostID VARCHAR(50),
+	@FromDate DATE,
+	@ToDate DATE,
+	@FromTime TIME,
+	@ToTime TIME,
+	@Offset VARCHAR(50),
+	@RecurrencePattern VARCHAR(50),  -- Values:once,daily,weekly,monthly
+	--Expecting the selected Week in Comma Seperator with only the first 3 character of the day Eg: Mon,Tue,Wed,Thu,Fri,Sat,Sun  
+	@Occurence VARCHAR(200), -- expecting
+	@ISSMSEnabled BIT,
+	@OutlookNotfication BIT,
+	@CreatedDate DATETIME,
+	@IPAddress VARCHAR(30),
+	@LocationId INT,
+	@GroupID INT
+)
+AS
+BEGIN
+
+
+	SET NOCOUNT ON
+	BEGIN TRANSACTION [MutiRquest]
+
+	BEGIN TRY
+	
+	SET @RecurrencePattern = LOWER(@RecurrencePattern)
+	SET @Occurence = LOWER(@Occurence)
+	DECLARE @RequestStatus VARCHAR(50)
+	SET @RequestStatus = 'yet to arrive'
+	DECLARE @Status VARCHAR(20)
+	SET @Status = 'Submitted'
+	DECLARE @FromDateTime DATETIME
+	SET @FromDateTime = DATEADD(ms, DATEDIFF(ms, '00:00:00', @FromTime), CONVERT(DATETIME, @FromDate))
+	DECLARE @ToDateTime DATETIME
+	SET @ToDateTime = DATEADD(ms, DATEDIFF(ms, '00:00:00', @ToTime), CONVERT(DATETIME, @ToDate))
+
+	-- TO INSERT IN tbl:VisitorMaster 
+	DECLARE @InsertedVisitorID TABLE (VisitorID INT, MasterVisitorID INT)
+	---INSERT TO TBL: VisitorMaster
+	INSERT INTO VisitorMaster ( VisitorReferenceNo, FirstName, LastName, Company, Designation, Country,
+	MobileNo, EmailID, CreatedBy, CreatedDate, LastUpdatedBy, LastUpdateDate, Gender, IsConfidential, 
+	D_MasterVisitorID)
+	OUTPUT INSERTED.VisitorID, INSERTED.D_MasterVisitorID INTO @InsertedVisitorID
+	SELECT VisitorReferenceNo, FirstName, LastName, Company, Designation, Country,
+	MobileNo, EmailID, CreatedBy, CreatedDate, LastUpdatedBy, LastUpdateDate, Gender, IsConfidential,
+	MasterVisitorID
+	FROM MSTR_VisitorMaster WITH(NOLOCK)
+	WHERE MasterVisitorID  IN (select [MasterVisitorID] from @VisitorID)
+
+	--INSERT INTO TBL: VisitorProof BY GETTING THE 'VisitorID' INSERTED IN TBL: VisitorMaster
+	INSERT INTO VisitorProof (VisitorID, Photo, FileContentId)
+	(
+		SELECT Inserted.VisitorID, M_Proof.Photo, M_Proof.FileContentId FROM 
+		@InsertedVisitorID Inserted INNER JOIN MSTR_VisitorProof M_Proof WITH(NOLOCK) ON Inserted.MasterVisitorID = M_Proof.MasterVisitorID
+	)
+
+    --INSERT INTO TBL:IdentityDetails FOR ARGENTINA
+	IF @Country = 'Argentina'
+	BEGIN
+	INSERT INTO IdentityDetails (VisitorID,IdentityType,IdentityNo) 
+	(
+	   SELECT Inserted.VisitorID, Arg.[IdentityType],Arg.[IdentityName] FROM 
+	   @InsertedVisitorID Inserted  INNER JOIN @VisitorID Arg ON Inserted.MasterVisitorID = Arg.MasterVisitorID
+	 )
+	END
+
+	-- TO INSERT IN tbl:VisitorRequest 
+	DECLARE @InsertedRequestID TABLE (RequestID INT, VisitorID INT)
+	--INSERT INTO TBL: VisitorRequest
+
+	
+	INSERT INTO VisitorRequest ( RequestedDate, VisitorID, Country, City, Facility, Purpose, HostID, HostContactNo, FromDate,
+	ToDate, FromTime, ToTime, RequestStatus, RecurrencePattern, Occurence, Createdby, CreatedDate, HostDepartment, [Status], 
+	PermitITEquipments,
+	--ParentReferenceId, -- Not required. But need to check when it is continuious request
+	IPAddress, ISSMSEnabled, BulkUpload, LocationId, OutlookNotfication, Offset, MasterVisitorId,BJMailFlag,HostAssociateID
+	)
+	OUTPUT INSERTED.RequestID, INSERTED.VisitorID INTO @InsertedRequestID
+	SELECT @CreatedDate, TempVisitorID.VisitorID, @Country, @City, @Facility, 
+	/*To checkin TFS DB project*/
+	 CASE WHEN MVisitorMaster.other IS NULL OR MVisitorMaster.other = '' THEN MVisitorMaster.VisitorType ELSE MVisitorMaster.other END, 
+	 
+	 HostDetails.HostName, HostDetails.MobileNo, @FromDate,
+	@ToDate, @FromTime, @ToTime, @RequestStatus, @RecurrencePattern, @Occurence, @HostID, @CreatedDate, HostDetails.Department, @Status,
+	CASE WHEN MVisitorMaster.VisitorType IN ('Business Partner','Clients','Vendor','Guests','Imp/VIP Visitor','Auditors') THEN 1 ELSE 0 END,
+	@IPAddress, @ISSMSEnabled, 0, @LocationId, @OutlookNotfication, @Offset, TempVisitorID.MasterVisitorID,0,@HostID
+	FROM @InsertedVisitorID TempVisitorID 
+	INNER JOIN 
+	(
+		SELECT TOP 1      
+		Associate.Associate_LastName + ', ' + Associate.Associate_FirstName + ' (' + @HostID + ')' as HostName,
+		Department.Dept_Desc as Department, COALESCE((SELECT TOP 1 Value FROM  [CentralRepository].dbo.vw_CentralRepository_contacts WITH (NOLOCK) Where Associate_ID = Associate.Associate_ID AND Contact_Type like '%MBL%' ),'') as MobileNo
+		FROM  [CentralRepository].dbo.vw_CentralRepository_Associate_Details Associate WITH (NOLOCK)      
+		LEFT JOIN  [CentralRepository].dbo.vw_CentralRepository_Department Department WITH (NOLOCK) ON Associate.Dept_ID =Department.Dept_ID      
+		WHERE Associate.Associate_id = @HostID  
+	) HostDetails ON 1=1
+	INNER JOIN MSTR_VisitorMaster MVisitorMaster WITH(NOLOCK) ON MVisitorMaster.MasterVisitorID = TempVisitorID.MasterVisitorID
+
+
+
+
+	--INSERT INTO TBL: VisitorEmergencyContact BY GETTING THE 'RequestID' INSERTED IN TBL: VisitorMaster
+	INSERT INTO VisitorEmergencyContact (RequestID, FromDate, ToDate) (SELECT RequestID, @FromDateTime, @ToDateTime FROM @InsertedRequestID)
+
+	-- TO INSERT IN tbl:VisitDetails 
+	DECLARE @InsertedVisitDetailsID TABLE (VisitDetailsID INT, RequestID INT)
+	--INSERT INTO TBL: VisitDetails
+	INSERT INTO VisitDetails (RequestID, [Date])
+	OUTPUT INSERTED.VisitDetailsID, INSERTED.RequestID INTO @InsertedVisitDetailsID
+	SELECT TempRequestID.RequestID, VisitDate.DateValue  
+	FROM @InsertedRequestID TempRequestID INNER JOIN 
+	(
+		SELECT TBLDates.DateValue, TBLDates.[Day], TBLDates.[Date] FROM 
+		(
+			SELECT DATEADD(DAY,number,@FromDate) DateValue, SUBSTRING(DATENAME(weekday,DATEADD(DAY,number,@FromDate)), 0, 4) [Day], DAY(DATEADD(DAY,number,@FromDate)) [Date],
+			CASE WHEN @RecurrencePattern = 'once' OR @RecurrencePattern = 'daily' THEN @RecurrencePattern ELSE NULL END Item
+			FROM master..spt_values
+			WHERE type = 'P'
+			AND DATEADD(DAY,number+1,@FromDate) <= DATEADD(DAY,1,@ToDate)
+		) TBLDates 
+		LEFT JOIN SplitString(@Occurence, ',') Weekly ON LOWER(TBLDates.[Day]) = LOWER(Weekly.Item) AND @RecurrencePattern = 'weekly'
+		LEFT JOIN SplitString(@Occurence, ',') Monthly ON TBLDates.[Date] = Monthly.Item AND @RecurrencePattern = 'monthly'
+		WHERE 
+		((@RecurrencePattern = 'once' OR @RecurrencePattern = 'daily' AND TBLDates.Item IS NOT NULL) OR
+		(@RecurrencePattern = 'weekly' AND Weekly.Item IS NOT NULL) OR
+		(@RecurrencePattern = 'monthly' AND Monthly.Item IS NOT NULL) )
+		AND  TBLDates.DateValue >= CONVERT(date, @CreatedDate)
+	) VisitDate ON 1=1
+
+	--INSERT INTO TBL: VisitorEquipments
+	INSERT INTO VisitorEquipments (VisitDetailsID, MasterDataID, Make, Model, SerialNo, Others)
+	(SELECT TempDetails.VisitDetailsID, MSTREquipment.MasterDataID, MSTREquipment.Make, MSTREquipment.Model, MSTREquipment.SerialNo, MSTREquipment.Others FROM 
+	@InsertedVisitDetailsID TempDetails 
+	INNER JOIN @InsertedRequestID TempRequest ON TempDetails.RequestID = TempRequest.RequestID
+	INNER JOIN @InsertedVisitorID TempVisitor ON TempRequest.VisitorID = TempVisitor.VisitorID
+	INNER JOIN MSTR_VisitorEquipments MSTREquipment ON TempVisitor.MasterVisitorID = MSTREquipment.MasterVisitorID
+	)
+
+	--UPDATE TBL: DC_Status
+	UPDATE DC_Status SET
+	DC_Status.VisitorId = Request.VisitorID,
+	DC_Status.Country = Request.Country,
+	DC_Status.City = Request.City,
+	DC_Status.Facility = Request.Facility,
+	DC_Status.VisitorType = Request.Purpose,
+	DC_Status.CreatedBy = Request.Createdby,
+	DC_Status.CreatedDate = Request.CreatedDate,
+	DC_Status.DCStatus ='Pending',
+	DC_Status.VisitorReqStatus = Request.[Status],
+	DC_Status.Lastupdateddate_VMS = Request.LastUpdatedDate,
+	DC_Status.RequestID_VMS = Request.RequestID,
+	DC_Status.DCUnique_Id = TBLMaster.dcid
+	FROM 
+	DC_Status 
+	INNER JOIN @VisitorID TBLMaster ON TBLMaster.DCTempuniqueid = DC_Status.TempUnique_Id
+	INNER JOIN @InsertedVisitorID TempVisitorID ON TBLMaster.MasterVisitorID = TempVisitorID.MasterVisitorID
+	INNER JOIN @InsertedRequestID TempRequestID	ON TempVisitorID.VisitorID = TempRequestID.VisitorID
+	INNER JOIN VisitorRequest Request ON TempRequestID.RequestID = Request.RequestID
+	
+	--Delete SavedRequest
+	DELETE FROM [dbo].[VisitorSavedLocationRequest] WHERE HostID = @HostID AND GroupId = @GroupID 
+	DELETE FROM [dbo].[VisitorsSavedDCDetails] WHERE HostID = @HostID AND GroupId = @GroupID
+	DELETE FROM [dbo].[VisitorsSavedArgentinaDetails] WHERE HostID = @HostID AND GroupId = @GroupID
+
+	SELECT 1 ReturnStatus, 'Success' ReturnMessage
+	--Returning MasterVisitorID, RequestID
+	SELECT TempRequestID.VisitorID VisitorID, TempRequestID.RequestID RequestID, (VMaster.FirstName + ' ' + VMaster.LastName) Name,VMaster.Company Organization, VMaster.MobileNo MobileNo, RequestTable.Purpose Purpose, VMaster.EmailID EmailID
+	 FROM @InsertedRequestID TempRequestID
+	INNER JOIN VisitorMaster VMaster ON TempRequestID.VisitorID = VMaster.VisitorID
+	INNER JOIN VisitorRequest RequestTable ON TempRequestID.VisitorID = RequestTable.VisitorID
+	COMMIT TRANSACTION [MutiRquest]
+
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION [MutiRquest]
+		DECLARE @ErrorMessage varchar(2000) = CONVERT(varchar(2000),OBJECT_NAME(@@PROCID)+':'+ ERROR_MESSAGE() )
+
+		SELECT 0 ReturnStatus, @ErrorMessage ReturnMessage
+		
+	END CATCH
+
+END
+
+
+
+/****** Object:  StoredProcedure [dbo].[GetRecentVisitors_New]    Script Date: 2/9/2018 2:56:10 PM ******/
+SET ANSI_NULLS ON
