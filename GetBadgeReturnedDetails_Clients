@@ -1,0 +1,59 @@
+CREATE procedure [dbo].[GetBadgeReturnedDetails_Clients]
+(
+@VisitDetailsID varchar(50)
+)
+as 
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+Declare @EmailID varchar(30);
+
+
+SELECT 
+	substring(Vr.HostID,len(Vr.HostID)-6,6) AS HostID 
+	,Vr.VisitorID
+	,Vr.RequestID
+	,RequestStatus
+	,FirstName+' '+ LastName AS Name 
+	,Company,
+	 CONVERT(VARCHAR(10),FromDate,103)as FromDate
+	,CONVERT(VARCHAR(10),ToDate,103),FromTime AS inTime
+	,ToTime
+	,CONVERT(TIME,Vd.ActualOutTime,103) AS ActualOutTime
+	,Vd.BadgeNo
+	,LM.LocationCity as City
+	,LM.LocationName as Facility
+	,BadgeStatus
+	,CONVERT(VARCHAR(10),ToDate,103)as ToDate
+FROM 
+	VisitDetails Vd WITH (NOLOCK)
+	JOIN VisitorRequest Vr WITH (NOLOCK)ON Vd.RequestId = Vr.RequestId
+	JOIN VisitorMaster Vm WITH (NOLOCK)  ON Vr.VisitorId = Vm.VisitorId
+	Join TblLocationMaster LM WITH (NOLOCK) on LM.LocationId=Vr.LocationId or LM.CountryCityFacility=VR.Facility
+WHERE
+	--Vd.VisitDetailsID=@VisitDetailsID
+ VD.RequestID in (select requestid from visitorrequest where parentreferenceid=@VisitDetailsID or RequestID = @VisitDetailsID)
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
