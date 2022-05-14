@@ -1,0 +1,94 @@
+CREATE PROCEDURE [dbo].[usp_InsertVisitorCart](@VisitorType varchar(100),
+@MobileNo varchar(14),
+@Name varchar(50),
+@Organization varchar(50),
+@NativeCountry varchar(50),
+@LocationName varchar(50),
+@HostId varchar(50)=null,
+@Date varchar(5000),
+@StartTime varchar(50),
+@ToTime varchar(50),
+@AssociateID varchar(10),
+@isDatacenterAccess int,
+@IsVisitorConfidance int,
+@IsEquipment int,
+@IsMultiplelocation int,
+@Others varchar(100),
+@LocationCount int,
+@LocationID varchar(100),
+@EuipmqntUniqID int)
+       -- Add the parameters for the stored procedure here
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+    -- Insert statements for procedure here
+       --Declare @Count int=(select Count(1) from tbl_VisitorCart where VisitorType=@VisitorType and MobileNo=@MobileNo and Organization=@Organization and VisitorName=@Name and NativeCountry=@NativeCountry and LocationName=@LocationName and Date=@Date and FromTime=@StartTime and ToTime=@ToTime and [Flag]=1 and AssociateID=@AssociateID )
+       --if(@Count=0 OR @Count is null)
+       --begin
+       if(@HostId='Empty')
+       begin
+       Declare @AssciateName varchar(100)=(select CONCAT(Associate_FirstName,',',Associate_LastName) from CentralRepository.dbo.vw_CentralRepository_Associate_Details where Associate_ID=@AssociateID)
+       Insert into tbl_VisitorCart(
+      [VisitorType]
+      ,[MobileNo]
+      ,[Organization]
+      ,[VisitorName]
+      ,[NativeCountry]
+      ,[LocationName]
+      ,[HostID]
+      ,[Date]
+      ,[FromTime]
+      ,[ToTime]
+      ,[TimeStamp]
+      ,[Flag],
+         AssociateID,
+         isDatacenterAccess,
+         IsVisitorConfidance,
+         IsEquipment,[Ismultilocation],Others,LocationCount,LocationID,EuipmqntUniqID) values(@VisitorType,@MobileNo,@Organization,@Name,@NativeCountry,@LocationName,Concat(@AssciateName,' ','(',@AssociateID,')'),@Date,
+         @StartTime,@ToTime,GETDATE(),1,@AssociateID,@isDatacenterAccess,@IsVisitorConfidance,@IsEquipment,@IsMultiplelocation,@Others,@LocationCount,@LocationID,@EuipmqntUniqID)
+
+             Select CartID,VisitorName,[LocationName],Date,[FromTime],[ToTime],[Ismultilocation],HostID
+         ,isDatacenterAccess,IsEquipment,LocationCount,Others from tbl_VisitorCart  VC   
+       where AssociateID=@AssociateID and [Flag]=1 
+       --and  TimeStamp>=GetDate()
+       order by CartID desc
+         end
+         else
+         begin
+         Insert into tbl_VisitorCart(
+      [VisitorType]
+      ,[MobileNo]
+      ,[Organization]
+      ,[VisitorName]
+      ,[NativeCountry]
+      ,[LocationName]
+      ,[HostID]
+      ,[Date]
+      ,[FromTime]
+      ,[ToTime]
+      ,[TimeStamp]
+      ,[Flag],
+         AssociateID,
+         isDatacenterAccess,
+         IsVisitorConfidance,
+         IsEquipment,[Ismultilocation],Others,LocationCount,LocationID,EuipmqntUniqID) values(@VisitorType,@MobileNo,@Organization,@Name,@NativeCountry,@LocationName,@HostId,@Date,
+         @StartTime,@ToTime,GETDATE(),1,@AssociateID,@isDatacenterAccess,@IsVisitorConfidance,@IsEquipment,@IsMultiplelocation,@Others,@LocationCount,@LocationID,@EuipmqntUniqID)
+
+           Select CartID,VisitorName,[LocationName],Date,[FromTime],[ToTime],[Ismultilocation],HostID
+         ,isDatacenterAccess,IsEquipment,LocationCount,Others from tbl_VisitorCart  VC   
+       where AssociateID=@AssociateID and [Flag]=1 
+       --and  TimeStamp>=GetDate()
+       order by CartID desc
+         end
+       --   end
+              --else
+              --begin
+              --select 0 as CartID
+              --end         
+         --Select SCOPE_IDENTITY() as CartID,VisitorName,[LocationName],Convert(varchar(11),Cast(Date as datetime),106) as Date,[FromTime],[ToTime] from tbl_VisitorCart where AssociateID=@AssociateID order by [TimeStamp] desc
+
+         
+END
