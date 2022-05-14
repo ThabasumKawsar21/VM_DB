@@ -1,0 +1,79 @@
+CREATE PROCEDURE [dbo].[usp_InsertVisitorRequest](
+      @VisitorID int
+      ,@Facility varchar(100)
+      ,@Purpose varchar(100)
+      ,@HostID varchar(100)
+      ,@FromDate varchar(100)
+      ,@ToDate varchar(100)
+      ,@FromTime varchar(100)
+      ,@ToTime varchar(100)
+      ,@Createdby varchar(100)
+      ,@PermitITEquipments int
+      ,@ParentReferenceId varchar(100)
+      ,@BulkUpload int,
+         @MasterVisitorID int,
+         @Externalrequestcamefrom varchar(50),
+		 @offval varchar(50))
+       -- Add the parameters for the stored procedure here
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+SET NOCOUNT ON;
+
+ 
+    -- Insert statements for procedure here
+       if(@BulkUpload=1)    
+       begin
+       Declare @AssciateName varchar(100)=(select CONCAT(Associate_FirstName,',',Associate_LastName) from CentralRepository.dbo.vw_CentralRepository_Associate_Details where Associate_ID=@HostID)
+       insert into  VisitorRequest([RequestedDate]
+      ,[VisitorID]
+      ,[Facility]
+      ,[Purpose]
+      ,[HostID]
+      ,[FromDate]
+      ,[ToDate]
+      ,[FromTime]
+      ,[ToTime]
+      ,[RequestStatus]
+      ,[Createdby]
+      ,[CreatedDate]    
+      ,[Status]
+      ,[PermitITEquipments]      
+      ,[ParentReferenceId]
+      ,[ISSMSEnabled]
+      ,[BulkUpload]    
+      ,[OutlookNotfication],BJMailFlag,HostAssociateID,MasterVisitorID,ExternalRequestCameFrom,Offset
+      ) values (GETDATE(),@VisitorID,@Facility,@Purpose,Concat(@AssciateName,' ','(',@HostID,')'),@FromDate,@ToDate,@FromTime,@ToTime,'yet to arrive',@Createdby,GETDATE(),
+         'Submitted',@PermitITEquipments,@ParentReferenceId,1,@BulkUpload,1,0,@Createdby,@MasterVisitorID,@Externalrequestcamefrom,@offval)
+         select SCOPE_IDENTITY() as RequestID
+       end
+       else
+       begin
+       insert into  VisitorRequest([RequestedDate]
+      ,[VisitorID]
+      ,[Facility]
+      ,[Purpose]
+      ,[HostID]
+      ,[FromDate]
+      ,[ToDate]
+      ,[FromTime]
+      ,[ToTime]
+      ,[RequestStatus]
+      ,[Createdby]
+      ,[CreatedDate]    
+      ,[Status]
+      ,[PermitITEquipments]      
+      ,[ParentReferenceId]
+      ,[ISSMSEnabled]
+      ,[BulkUpload]    
+      ,[OutlookNotfication],BJMailFlag,HostAssociateID,MasterVisitorID,ExternalRequestCameFrom,Offset
+      ) values (GETDATE(),@VisitorID,@Facility,@Purpose,@HostID,@FromDate,@ToDate,@FromTime,@ToTime,'yet to arrive',@Createdby,GETDATE(),
+         'Submitted',@PermitITEquipments,@ParentReferenceId,1,@BulkUpload,1,0,@Createdby,@MasterVisitorID,@Externalrequestcamefrom,@offval)
+         select SCOPE_IDENTITY() as RequestID
+         end
+
+END
+
+
