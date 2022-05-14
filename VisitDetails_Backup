@@ -1,0 +1,18 @@
+CREATE TABLE [dbo].[VisitDetails_Backup](
+[ID] [int] IDENTITY(1,1),
+	[VisitDetailsID] [int] NOT NULL,
+	[RequestID] [int] NOT NULL,
+	[Date] [date] NULL,
+	[ActualOutTime] [time](7) NULL,
+	[BadgeNo] [varchar](50) NULL,
+	[BadgeIssuedDate] [datetime] NULL,
+	[BadgeStatus] [varchar](100) NULL,
+	[IssuedBy] [varchar](50) NULL,
+	[LastUpdatedDate] [datetime] NULL,
+ CONSTRAINT [PK_VisitDetails_Backup] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 90) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
