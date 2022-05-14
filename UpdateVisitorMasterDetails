@@ -1,0 +1,77 @@
+
+
+CREATE PROCEDURE [dbo].[UpdateVisitorMasterDetails]
+@Name varchar(50),
+@Company varchar(50),
+@MobileNo varchar(20),
+@visitorID varchar(50),
+@VisitorType varchar(40),
+@login varchar(20),
+@Others varchar(50)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+Declare @Count int=(select Count(1) from MSTR_VisitorMaster where MasterVisitorID=@visitorID)
+if(@Count>0)
+begin
+Declare @oldvisitorID int=(select MasterVisitorID from MSTR_VisitorMaster where MasterVisitorID=@visitorID)
+       Update 
+              [dbo].[MSTR_VisitorMaster]
+       set 
+              FirstName=@Name 
+              ,Company=@Company  
+              ,MobileNo=@MobileNo 
+              ,VisitorType = @VisitorType
+              ,LastUpdatedBy=@login
+              ,LastUpdateDate = getdate(),
+              other=@Others
+       where
+              MasterVisitorID=@VisitorID
+
+              Update 
+              [dbo].VisitorMaster
+       set 
+              FirstName=@Name 
+              ,Company=@Company  
+              ,MobileNo=@MobileNo 
+              ,LastUpdatedBy=@login
+              ,LastUpdateDate = getdate(),
+              Others=@Others
+       where
+              D_MasterVisitorID=@oldvisitorID
+              end
+              else
+              begin
+              Declare @MasterID int=(select D_MasterVisitorID from VisitorMaster where VisitorID=@visitorID)
+              Update 
+              [dbo].VisitorMaster
+       set 
+              FirstName=@Name 
+              ,Company=@Company  
+              ,MobileNo=@MobileNo 
+              ,LastUpdatedBy=@login
+              ,LastUpdateDate = getdate(),
+              Others=@Others
+       where
+              VisitorID=@VisitorID
+
+              Update 
+              [dbo].[MSTR_VisitorMaster]
+       set 
+              FirstName=@Name 
+              ,Company=@Company  
+              ,MobileNo=@MobileNo 
+              ,VisitorType = @VisitorType
+              ,LastUpdatedBy=@login
+              ,LastUpdateDate = getdate(),
+              other=@Others
+       where
+              MasterVisitorID=@MasterID
+              end
+
+RETURN 1 
+SET NOCOUNT OFF;     
+END
+
