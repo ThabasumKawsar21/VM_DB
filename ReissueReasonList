@@ -1,0 +1,7 @@
+CREATE TABLE [dbo].[ReissueReasonList]
+(
+	[ReasonID] INT NOT NULL IDENTITY , 
+    [ReasonDescription] VARCHAR(50) NULL, 
+    [Isactive] BIT NULL, 
+    CONSTRAINT [PK_ReissueReasonList] PRIMARY KEY ([ReasonID])
+)
