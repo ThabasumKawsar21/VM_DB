@@ -1,0 +1,74 @@
+CREATE PROCEDURE [dbo].[GetSavedVisitorDetails]    
+ (    
+ @Search VARCHAR(100) =NULL  ,
+ @FromDate DATE  =NULL ,
+ @ToDate DATE  =NULL,
+ @HostID VARCHAR(11)  
+ )     
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+declare @visitorIDs VARCHAR(MAX);
+declare @visitorNames VARCHAR(MAX); 
+declare @Name VARCHAR(500);
+
+
+CREATE TABLE #Temp1(
+ [Name] VARCHAR(100)
+ ,GroupId INT)
+
+ INSERT INTO #Temp1
+
+
+SELECT dbo.VMS_fnGetVisitorNames(Visitors.VisitorIDs) AS Name,
+        Visitors.GroupId
+		  FROM
+             (SELECT (STUFF((SELECT ', ' + [SelectedVisitors]
+               FROM [VisitorSavedLocationRequest] b 
+               WHERE b.GroupId = a.GroupId AND HostID = @HostID
+                FOR XML PATH('')), 1, 2, '')) AS [VisitorIDs] 
+		        ,a.GroupId AS GroupId
+		        FROM [VisitorSavedLocationRequest] a WHERE HostID = @HostID
+                  GROUP BY a.GroupId) Visitors
+				  
+
+
+SELECT Name
+	   ,CAST(A.[ModifiedDate] AS DATE)  AS ModifiedDate
+	   ,'Yet to submit' AS RequestStatus
+	   ,A.GroupId
+	    FROM [OneC_VMS].[dbo].[VisitorSavedLocationRequest] A
+		INNER JOIN #Temp1 B ON 
+		A.GroupId = B.GroupId
+		WHERE (Name LIKE '%'+@Search+'%') AND
+		ModifiedDate BETWEEN @FromDate AND @ToDate
+		GROUP BY A.GroupId,Name,ModifiedDate
+DROP TABLE #Temp1
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
