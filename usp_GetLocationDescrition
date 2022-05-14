@@ -1,0 +1,15 @@
+CREATE PROCEDURE [dbo].[usp_GetLocationDescrition](@LocationID varchar(100))
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	select CONCAT(RTRIM(LTRIM(LM.CountryDesc)),'-',LM.CityDesc,'-',LM.FacilityDesc)  from CentralRepository.dbo.vw_CentralRepository_LocationMaster_Locationmaster LM
+inner join CentralRepository.dbo.vw_CentralRepository_GSMS_AssociateSeatInfo G on LM.LocationCode=G.HCMLocationCode
+where CONCAT(LM.CountryCode,'-',LM.CityCode,'-',LM.FacilityDesc)=@LocationID
+
+END
