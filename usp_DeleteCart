@@ -1,0 +1,23 @@
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+CREATE PROCEDURE [dbo].[usp_DeleteCart](@AssociateID varchar(50),
+@CartID int)
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	update tbl_VisitorCart set [Flag]=0 where CartID=@CartID and AssociateID=@AssociateID
+
+	  	  Select CartID,VisitorType,MobileNo,Organization,VisitorName,NativeCountry,LocationName,HostID,Date,FromTime,ToTime,TimeStamp,Flag,AssociateID,IsEquipment,IsVisitorConfidance,isDatacenterAccess,Ismultilocation,Others,LocationCount,EuipmqntUniqID from tbl_VisitorCart  VC	
+	where AssociateID=@AssociateID and [Flag]=1 
+	order by CartID desc	
+END
+
