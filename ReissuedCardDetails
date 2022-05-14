@@ -1,0 +1,12 @@
+CREATE TABLE [dbo].[ReissuedCardDetails] (
+    [ID]              INT        IDENTITY (1, 1) NOT NULL,
+    [VisitDetailsID]  INT        NOT NULL,
+    [RequestID]       INT           NOT NULL,
+    [Date]            DATE          NULL,
+    [BadgeNo]         VARCHAR (50)  NULL,
+    [BadgeIssuedDate] DATETIME      NULL,
+    [BadgeStatus]     VARCHAR (100) NULL,
+    [IssuedBy]        VARCHAR (50)  NULL,
+    [LastUpdatedDate] DATETIME      NULL,
+    CONSTRAINT [PK_dbo.ReissuedCardDetails] PRIMARY KEY CLUSTERED ([ID] ASC)
+);
