@@ -1,0 +1,55 @@
+
+
+
+CREATE PROCEDURE [dbo].[GetBulkInterviewCandidateDetailsView](
+@ParentReferenceID INT =NULL
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+  (select (SELECT cast(count(VisitorRequest.ParentReferenceId)AS  varchar(1000))FROM
+VisitorRequest WITH (NOLOCK) WHERE VisitorRequest.BulkUpload=1 and VisitorRequest.ParentReferenceId is not null
+AND VisitorRequest.ParentReferenceId=@ParentReferenceID ) as Entries,
+Vm.FirstName,Vm.EmailID  as Email,Vm.MobileNo as Mobile,Vm.Company,VisitorRequest.Purpose,
+VisitorRequest.PermitITEquipments,Concat(CONVERT(varchar(11),VisitorRequest.FromDate,101),',',CONVERT(varchar(11),VisitorRequest.ToDate,101)) as Date,
+VisitorRequest.FromTime,VisitorRequest.ToTime,VisitorRequest.Facility,VisitorRequest.HostID,
+  VisitorRequest.RequestID,Vm.VisitorID,Vm.others from
+   VisitorMaster Vm WITH(NOLOCK)  inner join  
+   VisitorRequest WITH(NOLOCK) on Vm.VisitorID
+  =VisitorRequest.VisitorID where VisitorRequest.ParentReferenceId=@ParentReferenceID 
+    and  VisitorRequest.BulkUpload=1 and VisitorRequest.ParentReferenceId is not null and VisitorRequest.Status<>'Cancelled'
+
+     group by VisitorRequest.ParentReferenceId,Vm.FirstName,
+     Vm.EmailID,VisitorRequest.RequestID,Vm.VisitorID,Vm.MobileNo,Vm.Company,VisitorRequest.Purpose,
+VisitorRequest.PermitITEquipments,VisitorRequest.FromDate,VisitorRequest.ToDate,VisitorRequest.FromTime,
+VisitorRequest.ToTime,VisitorRequest.Facility,VisitorRequest.HostID,Vm.others)
+
+
+
+       
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN  
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH     
+
+RETURN 1 
+SET NOCOUNT OFF;     
+END
