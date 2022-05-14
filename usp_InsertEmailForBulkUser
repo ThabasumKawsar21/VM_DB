@@ -1,0 +1,14 @@
+CREATE PROCEDURE [dbo].[usp_InsertEmailForBulkUser](@VisitorID int,
+@EmailID varchar(50))
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	Update MSTR_VisitorMaster set EmailID=@EmailID where MasterVisitorID=@VisitorID
+	update VisitorMaster set EmailID=@EmailID where D_MasterVisitorID=@VisitorID
+END
