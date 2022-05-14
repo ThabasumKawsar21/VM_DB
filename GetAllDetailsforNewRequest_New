@@ -1,0 +1,58 @@
+CREATE PROCEDURE [dbo].[GetAllDetailsforNewRequest_New]( 
+       @hostID varchar(50)=null,
+      @city varchar(50)=null,
+       @CountryID varchar(50)=null,
+       @type varchar(50)=null)
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets fromjkk
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;      
+    -- Insert statements for procedure here
+       select MasterDataID,MasterDataDescription from MasterData where MasterDataType=@type order by DisplayOrder ASC
+
+  Select Country, Code as Code,CountryId as CountryId,0 as Rank from CountryCode WITH (NOLOCK)
+WHERE CountryId=COALESCE(@CountryID,CountryId)  group by Country,Code,CountryId
+
+
+       SELECT Country,CountryId FROM 
+              CountryCode WITH (NOLOCK)         
+       WHERE ISActive in ('A')    
+
+SELECT DISTINCT LocationId,LocationName
+FROM TblLocationMaster WITH (NOLOCK) 
+WHERE [Status] ='A' 
+--AND LocationCity=COALESCE(rtrim(@City), LocationCity)
+and LocationCity = COALESCE(@city,LocationCity)
+ORDER BY LocationId,LocationName
+
+Declare @CountryCode varchar(10)=(select top 1 CountryId from TblLocationMaster where LocationCity=@city)
+if(@CountryID is null)
+begin
+SELECT distinct (RTRIM(LTRIM([LocationCity]))) as LocationCity
+  FROM [OneC_VMS].[dbo].[TblLocationMaster] WITH (NOLOCK)
+  where CountryId=@CountryCode and Status='A'
+  Order By (RTRIM(LTRIM(LocationCity)))
+  end
+  else
+  begin
+  SELECT distinct (RTRIM(LTRIM([LocationCity]))) as LocationCity
+  FROM [OneC_VMS].[dbo].[TblLocationMaster] WITH (NOLOCK)
+  where CountryId=@CountryID and Status='A'
+  Order By (RTRIM(LTRIM(LocationCity)))
+  end
+
+       SELECT distinct cc.Country, cc.Code,cc.CountryId,COUNT(vm.Country) as Rank
+       FROM [VisitorMaster] vm WITH (NOLOCK) join CountryCode cc WITH (NOLOCK) on vm.Country=CONVERT(varchar(50),cc.CountryId)
+       join dbo.VisitorRequest VR WITH (NOLOCK) on VR.VisitorID=vm.VisitorID    
+       where HostID like '%' + @hostID + '%'  group by cc.Country,cc.CountryId,
+       vm.Country,cc.Code order by rank desc
+
+          select MasterDataID,MasterDataDescription from MasterData where MasterDataType='Equipment' order by DisplayOrder ASC
+       
+       
+SELECT Distinct(Code),Country FROM 
+              CountryCode WITH (NOLOCK)  order by code asc        
+       --WHERE ISActive in ('A')  
+
+END
