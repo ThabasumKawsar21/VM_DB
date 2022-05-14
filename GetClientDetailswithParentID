@@ -1,0 +1,57 @@
+ 
+CREATE PROCEDURE [dbo].[GetClientDetailswithParentID]    
+ (    
+ @ParentReferenceId int    
+ )     
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+Declare @check int
+
+SET @check = (select TOP 1 mastervisitorid from VisitorRequest where ParentReferenceId=@ParentReferenceId)
+
+if @check is not null
+begin
+select VR.RequestID,VR.VisitorID,VR.Facility,VR.ParentReferenceId,FORMAT(VR.FromDate,'dd/MM/yyyy' )AS FromDate ,FORMAT(VR.ToDate,'dd/MM/yyyy' )AS ToDate,CONVERT(VARCHAR, VR.FromTime, 100) AS FromTime,CONVERT(VARCHAR, VR.ToTime, 100) AS ToTime,
+concat(VM.FirstName,' ',VM.lastname)AS Name,VM.MobileNo,VM.Company,VR.HostAssociateID,VR.HostID,CRD.AccessCardNumber
+from VisitorRequest VR 
+Join MSTR_Visitormaster VM on VR.MasterVisitorId=VM.MasterVisitorID
+left join ClientRequestDetails CRD on CRD.RequestID = VR.RequestID
+where VR.ParentReferenceId=@ParentReferenceId
+end
+else
+begin
+select VR.RequestID,VR.VisitorID,VR.Facility,VR.ParentReferenceId,FORMAT(VR.FromDate,'dd/MM/yyyy' )AS FromDate ,FORMAT(VR.ToDate,'dd/MM/yyyy' )AS ToDate,CONVERT(VARCHAR, VR.FromTime, 100) AS FromTime,CONVERT(VARCHAR, VR.ToTime, 100) AS ToTime,
+concat(VM.FirstName,' ',VM.lastname)AS Name,VM.MobileNo,VM.Company,VR.HostAssociateID,VR.HostID,CRD.AccessCardNumber
+from VisitorRequest VR 
+Join Visitormaster VM on VR.visitorid=VM.visitorid
+left join ClientRequestDetails CRD on CRD.RequestID = VR.RequestID
+where VR.ParentReferenceId=@ParentReferenceId
+end
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
