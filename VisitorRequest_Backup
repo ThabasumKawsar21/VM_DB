@@ -1,0 +1,53 @@
+CREATE TABLE [dbo].[VisitorRequest_Backup](
+[ID] [int] IDENTITY(1,1) NOT NULL,
+	[RequestID] [int] NOT NULL,
+	[RequestedDate] [datetime] NOT NULL,
+	[VisitorID] [int] NOT NULL,
+	[Country] [varchar](50) NULL,
+	[City] [varchar](50) NULL,
+	[Facility] [varchar](100) NULL,
+	[Purpose] [varchar](200) NULL,
+	[HostID] [varchar](200) NULL,
+	[HostContactNo] [varchar](20) NULL,
+	[FromDate] [date] NULL,
+	[ToDate] [date] NULL,
+	[FromTime] [time](7) NULL,
+	[ToTime] [time](7) NULL,
+	[RequestStatus] [varchar](50) NULL,
+	[RecurrencePattern] [varchar](50) NULL,
+	[Occurence] [varchar](100) NULL,
+	[Comments] [varchar](500) NULL,
+	[Createdby] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+	[LastUpdatedby] [varchar](50) NULL,
+	[LastUpdatedDate] [datetime] NULL,
+	[HostDepartment] [varchar](100) NULL,
+	[Status] [varchar](20) NULL,
+	[PermitITEquipments] [bit] NULL,
+	[IPAddress] [varchar](30) NULL,
+	[ParentReferenceId] [int] NULL,
+	[ISSMSEnabled] [bit] NULL,
+	[BulkUpload] [bit] NULL,
+	[ExternalRequestCameFrom] [varchar](20) NULL,
+	[ExternalRequestId] [int] NULL,
+	[PermitId] [int] NULL,
+	[SafetyPermitType] [varchar](50) NULL,
+	[BuddyId] [varchar](50) NULL,
+	[LocationId] [int] NULL,
+	[OutlookNotfication] [bit] NULL,
+	[MailGuid] [varchar](200) NULL,
+	[IsEquipmentInCustody] [bit] NULL,
+	[ContractorCount] [int] NULL,
+	[SafetyPermitTypeId] [int] NULL,
+	[Offset] [varchar](50) NULL,
+	[MasterVisitorId] [int] NULL,
+	[BJMailFlag] [bit] NULL,
+	[HostAssociateID] [varchar](11)
+
+ CONSTRAINT [PK_VisitorRequest_Backup_1] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 80) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
