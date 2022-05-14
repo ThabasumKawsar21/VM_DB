@@ -1,0 +1,101 @@
+CREATE PROCEDURE GetSearchResult_MobApi
+	-- Add the parameters for the stored procedure here
+	(
+ @SearchValue VARCHAR(50) = NULL , 
+ @HostId Varchar(50)=NULL
+ )
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	BEGIN TRY	
+	DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+   --Adding equipment details
+	SET NOCOUNT ON;
+
+	DECLARE @CutoffDate DateTime = dateadd(Month,-36,getdate());
+
+SELECT DISTINCT TOP 20 VisitorID, Name,Company,MobileNo,VisitorType,VisitDetailsID,VisitorEquipmentID,MasterDataID,Make,Model,SerialNo,Others,MasterDataDescription, max(isUserCreated) as isUserCreated
+ ,Requestid FROM (
+       SELECT D1.Name,D1.VisitorId, D1.Requestid, D1.Company,D1.visitortype, D1.MobileNo,D1.isUserCreated,D2.VisitDetailsID,D2.VisitorEquipmentID,D2.MasterDataID, D2.Make
+                     ,D2.Model
+                     ,D2.SerialNo
+                     ,D2.Others
+                     ,D2.MasterDataDescription
+       FROM (
+              SELECT  VM.MasterVisitorID AS VisitorId
+                     ,(ISNULL(VM.FirstName,'') + ' ' + ISNULL(VM.LastName,'')) Name
+                     ,VM.Company
+                     ,VM.MobileNo
+                     ,VM.VisitorType visitortype
+                     ,(select top 1 IsNull(Permititequipments,0) from VisitorRequest VI where VI.MasterVisitorID=VM.MasterVisitorID order by Permititequipments desc) PermitITEquipments
+                     
+                     ,CASE 
+                           WHEN (VR.HostAssociateID = @HostId)
+                                  THEN 1
+                           ELSE 0
+                           END AS isUserCreated,						   
+						   (select max(VX.RequestID) from VisitorRequest VX where vx.mastervisitorid = vm.MasterVisitorID ) as RequestId
+                        FROM MSTR_VisitorMaster VM
+                inner join VisitorRequest VR on VM.MasterVisitorID=VR.MasterVisitorID
+
+              WHERE VR.CreatedDate>@CutoffDate AND VM.MasterVisitorID = VR.MasterVisitorID
+                     AND (
+                           (VM.MobileNo LIKE '%' + @SearchValue + '%')
+                           OR (VM.Company LIKE '%' + @SearchValue + '%')
+                           OR ((ISNULL(VM.FirstName,'') + ' ' + ISNULL(VM.LastName,'')) LIKE '%' + @SearchValue + '%')
+                           )
+              --ORDER BY isUserCreated DESC
+              --       ,VM.MasterVisitorId DESC
+              ) D1
+       LEFT JOIN (
+              SELECT D.MasterVisitorId
+                     ,A.VisitDetailsID
+                     ,B.VisitorEquipmentID
+                     ,B.MasterDataID
+                     ,B.Make
+                     ,B.SerialNo
+                     ,B.Model
+                     ,B.Others
+                     ,C.MasterDataDescription
+              FROM (
+                     SELECT MAX(V.VISITDETAILSID) AS VisitDetailsID
+                           ,RequestID
+                     FROM VisitDetails V
+                     GROUP BY V.RequestID
+                     ) A
+                     ,VisitorEquipments B
+                     ,MasterData C
+                     ,(
+                           SELECT MAX(X.RequestID) RequestID
+                                  ,X.MasterVisitorId
+                           FROM VisitorRequest X
+                           WHERE X.CreatedDate>@CutoffDate
+                           GROUP BY X.MasterVisitorId
+                           ) D
+              WHERE A.VisitDetailsID = B.VisitDetailsID
+                     AND B.MasterDataID = C.MasterDataID
+                     AND D.RequestID = A.RequestID
+              ) D2 ON D1.VisitorId = D2.MasterVisitorId
+              AND D1.PermitITEquipments=1 
+       --ORDER BY isUserCreated DESC
+       --     ,D1.VisitorId DESC   
+       ) AS TEMP 
+                group by  VisitorID, Name,Company,MobileNo,VisitorType,VisitDetailsID,VisitorEquipmentID,MasterDataID,Make,Model,SerialNo,Others,MasterDataDescription,Requestid
+                order by isUserCreated desc,  RequestId desc
+
+	END TRY    
+	BEGIN CATCH	
+	IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+	END CATCH	
+END
