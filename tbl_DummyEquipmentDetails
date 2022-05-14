@@ -1,0 +1,13 @@
+CREATE TABLE [dbo].[tbl_DummyEquipmentDetails](
+	[EquipmentuniqueID] [int] IDENTITY(1,1) NOT NULL,
+	[EquipmentType] [varchar](50) NULL,
+	[EquipmentMake] [varchar](50) NULL,
+	[EquipmentSerial] [varchar](50) NULL,
+	[EquipmentModel] [varchar](50) NULL,
+	[InsertedOn] [datetime] NOT NULL,
+	[CreatedBy] [varchar](50) NOT NULL,
+	[CartID] [int] NULL, 
+    CONSTRAINT [PK_tbl_DummyEquipmentDetails] PRIMARY KEY ([EquipmentuniqueID])
+) ON [PRIMARY]
+
+GO
