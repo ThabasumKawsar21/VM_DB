@@ -1,0 +1,41 @@
+CREATE PROCEDURE [dbo].[UpdateParentReferenceId]
+@RequestId varchar(50)
+
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+	
+	Declare @hostassocaiteID varchar(11)
+	SET @hostassocaiteID = (select Createdby from VisitorRequest where RequestID=@RequestId)
+	Update 
+		VisitorRequest 
+	set 
+		ParentReferenceId=@RequestId, HostAssociateID=@hostassocaiteID where RequestID=@RequestId
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
+
