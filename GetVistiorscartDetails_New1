@@ -1,0 +1,46 @@
+CREATE PROCEDURE [dbo].[GetVistiorscartDetails_New1]
+
+ (
+ @FillVisitorIDs [dbo].[VisitorIDList] READONLY,
+ @HostID varchar(11),
+ @GroupId int
+ )
+	
+AS
+BEGIN 
+SET NOCOUNT ON;
+BEGIN TRY
+BEGIN TRANSACTION TRANS
+
+SELECT   DISTINCT A.[MasterVisitorID] AS VisitorID
+	    ,A.[FirstName] AS FirstName
+	    ,A.[Company] AS Company
+		,A.[VisitorType] AS [Purpose]
+		,A.Gender AS [Gender]
+	    ,C.[MasterDataDescription] AS MasterDataDescription
+	    ,B.[Make] AS Make
+	    ,B.[Model] AS Model
+	    ,B.[SerialNo] AS SerialNo
+	    ,B.[Others] AS Others
+	   	FROM [dbo].[MSTR_VisitorMaster] A 
+		LEFT JOIN [MSTR_VisitorEquipments] B 
+			ON A.[MasterVisitorID] =B.[MasterVisitorID]
+	    LEFT JOIN [dbo].[MasterData] C 
+			ON B.[MasterDataID] = C.[MasterDataID]
+         WHERE A.[MasterVisitorID] IN ( SELECT [VisitorID] FROM @FillVisitorIDs) 
+
+		 SELECT [MasterVisitorID],[DCAccess],[DCUniqueID],[LocationId] FROM [dbo].[VisitorsSavedDCDetails]
+		 WHERE [MasterVisitorID] IN ( SELECT [VisitorID] FROM @FillVisitorIDs) AND HostID = @HostID AND GroupId = @GroupId
+
+		 SELECT [MasterVisitorID],[IdentityType],[IdentityNumber] FROM [dbo].[VisitorsSavedArgentinaDetails]
+		 WHERE  [MasterVisitorID] IN ( SELECT [VisitorID] FROM @FillVisitorIDs) AND HostID = @HostID AND GroupId = @GroupId
+
+COMMIT TRANSACTION TRANS
+END TRY
+BEGIN CATCH 	
+ROLLBACK TRANSACTION TRANS
+	DECLARE @errorMsg varchar(500)=OBJECT_NAME(@@PROCID)+':'+ ERROR_MESSAGE() 
+END CATCH
+SET NOCOUNT OFF;
+RETURN @@ERROR;
+END
