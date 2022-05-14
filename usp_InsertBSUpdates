@@ -1,0 +1,20 @@
+CREATE PROCEDURE [dbo].[usp_InsertBSUpdates]
+	@BS_id int ,
+	@Updatetime varchar(100),
+	@MailFlag int
+AS
+begin
+SET NOCOUNT ON 
+Declare @Count int = (Select count(1) from tbl_BS_Updates where BS_id = @BS_id)
+if(@count>0)
+begin
+	SELECT BS_id, Updatetime,MailFlag from tbl_BS_Updates where BS_id = @BS_id order by 1 desc
+end 
+else
+begin
+insert into tbl_BS_Updates(BS_id, Updatetime,MailFlag) values(@BS_id,@Updatetime,@MailFlag)
+Select 0 as BS_id
+
+end
+SET NOCOUNT off
+end 
