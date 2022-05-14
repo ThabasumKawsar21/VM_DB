@@ -1,0 +1,74 @@
+CREATE PROCEDURE [dbo].[SurrenderLostCard]
+	
+@checkoutDetails varchar(500),
+@visitDetailId int
+	
+
+AS
+BEGIN
+SET NOCOUNT ON;
+
+BEGIN TRY
+
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+	DECLARE @i INT = 1;
+    DECLARE @count int;
+    DECLARE @VCardno varchar(100);
+    DECLARE @ReqID INT;
+	
+	SET @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @visitDetailId)
+   
+	IF (SELECT CHARINDEX(',',@checkoutDetails))>0
+	BEGIN
+		SELECT RowId,value into #TempTable
+		 from (
+			 SELECT  ROW_NUMBER()over(order by value asc) as RowId,value FROM STRING_SPLIT(@checkoutDetails,',')
+         ) as details
+
+		  SELECT @count=  Count(*) FROM #TempTable
+
+		  WHILE @i < (@count+1)
+             BEGIN
+			 SET @VCardno= (select value from #TempTable where RowId=@i)
+			
+				   UPDATE VisitDetails
+				   SET BadgeStatus='Returned' Where  RequestID=@ReqID and BadgeNo=@VCardno
+				    UPDATE ReissuedCardDetails
+				   SET BadgeStatus='Returned' Where  RequestID=@ReqID and BadgeNo=@VCardno
+			   
+			  
+			   SET @i=@i+1
+             END
+			 DROP TABLE  #TempTable 
+	END
+	ELSE 
+	BEGIN
+	       UPDATE VisitDetails
+		 SET BadgeStatus='Returned' Where  RequestID=@ReqID and BadgeNo=@checkoutDetails
+		 UPDATE ReissuedCardDetails
+		 SET BadgeStatus='Returned' Where  RequestID=@ReqID and BadgeNo=@checkoutDetails
+		
+	END
+	
+	
+	
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+END
