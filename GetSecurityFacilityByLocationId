@@ -1,0 +1,47 @@
+
+
+CREATE PROCEDURE [dbo].[GetSecurityFacilityByLocationId]
+(
+@securityID varchar(10)
+)AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+	SELECT DISTINCT 
+		 rm.CountryId		
+		,rm.LocationId
+		,lm.LocationName as Facility
+		,lm.LocationCity as City		
+		,cc.Country as CountryName,
+		cc.CultureInfo,
+		lm.CountryCityFacility
+	FROM 
+		vw_rolemapping_restrict rm WITH (NOLOCK)
+		INNER JOIN tblLocationMaster lm WITH (NOLOCK) ON rm.LocationId = lm.LocationId
+		left Join CountryCode cc WITH (NOLOCK) on cc.CountryId=rm.CountryId
+	WHERE UserID=@securityID
+
+END TRY
+
+BEGIN CATCH
+
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
