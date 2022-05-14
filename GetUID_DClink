@@ -1,0 +1,20 @@
+CREATE PROCEDURE [dbo].[GetUID_DClink]
+	@visitorid varchar(50),
+	@returnuniqueid INT OUTPUT
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	IF EXISTS(select TempUnique_Id from DC_Status where VisitorId=@visitorid)
+	begin
+set	@returnuniqueid =(select TempUnique_Id from DC_Status where VisitorId=@visitorid)
+	end
+	else
+	begin
+	set @returnuniqueid=0
+
+	end
+END
