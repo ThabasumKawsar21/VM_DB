@@ -1,0 +1,49 @@
+
+
+CREATE FUNCTION [dbo].[VMS_fnGenerateBadgeStatusForClient] 
+(
+	@ParentRefId int,
+	@ReqStatus varchar(100)
+)
+RETURNS varchar(100)
+AS
+BEGIN
+
+DECLARE @ClientList TABLE (
+    VisitorID int,
+    BadgeStatus varchar(100)
+) 
+
+Declare @Result varchar(150)=''
+INSERT INTO @ClientList(VisitorID,BadgeStatus)
+	select distinct(VR.VisitorID),VD.badgestatus
+	from VisitorRequest VR WITH (NOLOCK)
+	INNER JOIN Visitormaster VM WITH (NOLOCK) on VM.VisitorID=VR.VisitorID
+	LEFT JOIN ClientRequestDetails CR WITH (NOLOCK) on CR.RequestID=VR.RequestID
+	INNER JOIN VisitDetails VD WITH (NOLOCK) on VR.requestId= VD.requestid 
+	where (VR.ParentReferenceId=@ParentRefId or VR.RequestID=@ParentRefId) and VR.purpose='Client'
+		and CR.ReissueStatus is NULL
+	
+
+	IF @ReqStatus='YET TO ARRIVE'
+	BEGIN
+		IF EXISTS(Select BadgeStatus from @ClientList where UPPER(BadgeStatus)='VCARD PARTIALLY UPDATED')
+			SET @Result='VCard Partially Updated'
+		ELSE IF EXISTS(Select BadgeStatus from @ClientList where UPPER(BadgeStatus)='ISSUED')
+			SET @Result='Issued'
+	END	
+	ELSE IF @ReqStatus='IN'
+	BEGIN
+		IF EXISTS(Select BadgeStatus from @ClientList where UPPER(BadgeStatus) in('RETURNED','LOST'))
+			SET @Result='Partially Closed'		
+	END
+	ELSE IF @ReqStatus='OUT'
+	BEGIN
+		IF EXISTS(Select BadgeStatus from @ClientList where UPPER(BadgeStatus) in('ISSUED'))
+			SET @Result='Issued'		
+	END
+
+
+	RETURN @Result
+
+END
