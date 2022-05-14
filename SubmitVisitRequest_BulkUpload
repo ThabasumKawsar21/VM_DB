@@ -1,0 +1,128 @@
+CREATE PROCEDURE [dbo].[SubmitVisitRequest_BulkUpload]
+(
+       @VisitorDetails udt_VMS_RequestBulk READONLY,
+       @Country VARCHAR(50),
+       @City VARCHAR(50),
+       @Facility VARCHAR(50),
+       @HostID VARCHAR(50),
+       @FromDate DATE,
+       @ToDate DATE,
+       @FromTime TIME,
+       @ToTime TIME,
+       @Offset VARCHAR(50),
+       @RecurrencePattern VARCHAR(50),  -- Values:once,daily,weekly,monthly
+       --Expecting the selected Week in Comma Seperator with only the first 3 character of the day Eg: Mon,Tue,Wed,Thu,Fri,Sat,Sun  
+       @Occurence VARCHAR(200), -- expecting
+       @ISSMSEnabled BIT,
+       @OutlookNotfication BIT,
+       @CreatedDate DATETIME,
+       @IPAddress VARCHAR(30),
+       @LocationId INT,
+       @VisitorType VARCHAR(50)
+)
+AS
+BEGIN
+
+       SET NOCOUNT ON
+       BEGIN TRANSACTION [MutiRquest]
+
+       BEGIN TRY
+       
+       SET @RecurrencePattern = LOWER(@RecurrencePattern)
+       SET @Occurence = LOWER(@Occurence)
+       DECLARE @RequestStatus VARCHAR(50)
+       SET @RequestStatus = 'yet to arrive'
+       DECLARE @Status VARCHAR(20)
+       SET @Status = 'Submitted'
+       DECLARE @FromDateTime DATETIME
+       SET @FromDateTime = DATEADD(ms, DATEDIFF(ms, '00:00:00', @FromTime), CONVERT(DATETIME, @FromDate))
+       DECLARE @ToDateTime DATETIME
+       SET @ToDateTime = DATEADD(ms, DATEDIFF(ms, '00:00:00', @ToTime), CONVERT(DATETIME, @ToDate))
+
+       -- TO INSERT IN tbl:VisitorMaster 
+       DECLARE @InsertedVisitorID TABLE (VisitorID INT, MasterVisitorID INT)
+       ---INSERT TO TBL: VisitorMaster
+       INSERT INTO VisitorMaster (FirstName, LastName, EmailID, Gender, D_MasterVisitorID)
+       OUTPUT INSERTED.VisitorID, INSERTED.D_MasterVisitorID INTO @InsertedVisitorID
+       SELECT [FirstName], [LastName], [Email], [Gender], [Id]
+       FROM @VisitorDetails
+
+       --UPDATING TBL: VisitorMaster.D_MasterVisitorID TO ZERO AS THE BULK UPLOAD DETAILS IS NOT INSERTED TO TBL:MSTR_VisitorMaster
+       --PREVIOUS QUERY D_MasterVisitorID WAS INSERTED TO GET THE VISITORID AND BULKUPLOAD ID MAPPING
+       UPDATE VMaster SET VMaster.D_MasterVisitorID = 0
+       FROM VisitorMaster VMaster 
+       INNER JOIN @InsertedVisitorID TempVDetails ON VMaster.VisitorID = TempVDetails.VisitorID
+
+       -- TO INSERT IN tbl:VisitorRequest 
+       DECLARE @InsertedRequestID TABLE (RequestID INT, VisitorID INT)
+       --INSERT INTO TBL: VisitorRequest
+       INSERT INTO VisitorRequest (RequestedDate, VisitorID, Country, City, Facility, Purpose, HostID, HostContactNo, FromDate,
+       ToDate, FromTime, ToTime, RequestStatus, RecurrencePattern, Occurence, Createdby, CreatedDate, HostDepartment, [Status], PermitITEquipments,
+       --ParentReferenceId, -- Not required. But need to check when it is continuious request
+       IPAddress, ISSMSEnabled, BulkUpload, LocationId, OutlookNotfication, Offset,BJMailFlag,HostAssociateID
+       )
+       OUTPUT INSERTED.RequestID, INSERTED.VisitorID INTO @InsertedRequestID
+       SELECT @CreatedDate, TempVisitorID.VisitorID, @Country, @City, @Facility, @VisitorType, HostDetails.HostName, HostDetails.MobileNo, @FromDate,
+       @ToDate, @FromTime, @ToTime, @RequestStatus, @RecurrencePattern, @Occurence, @HostID, @CreatedDate, HostDetails.Department, @Status, 0,
+       @IPAddress, @ISSMSEnabled, 1, @LocationId, @OutlookNotfication, @Offset,0,@HostID
+       FROM @InsertedVisitorID TempVisitorID 
+       INNER JOIN 
+       (
+             SELECT TOP 1      
+             Associate.Associate_LastName + ', ' + Associate.Associate_FirstName + ' (' + @HostID + ')' as HostName,
+             Department.Dept_Desc as Department, COALESCE((SELECT TOP 1 Value FROM  [CentralRepository].dbo.vw_CentralRepository_contacts WITH (NOLOCK) Where Associate_ID = Associate.Associate_ID AND Contact_Type like '%MBL%' ),'') as MobileNo
+             FROM  [CentralRepository].dbo.vw_CentralRepository_Associate_Details Associate WITH (NOLOCK)      
+             LEFT JOIN  [CentralRepository].dbo.vw_CentralRepository_Department Department WITH (NOLOCK) ON Associate.Dept_ID =Department.Dept_ID      
+             WHERE Associate.Associate_id = @HostID  
+       ) HostDetails ON 1=1
+
+       UPDATE VRequest SET VRequest.ParentReferenceId = (SELECT TOP 1 RequestID FROM @InsertedRequestID)
+       FROM VisitorRequest VRequest
+       INNER JOIN @InsertedRequestID TempVRequest ON VRequest.RequestID = TempVRequest.RequestID
+
+       --INSERT INTO TBL: VisitorEmergencyContact BY GETTING THE 'RequestID' INSERTED IN TBL: VisitorMaster
+       INSERT INTO VisitorEmergencyContact (RequestID, FromDate, ToDate) (SELECT RequestID, @FromDateTime, @ToDateTime FROM @InsertedRequestID)
+
+       -- TO INSERT IN tbl:VisitDetails 
+       DECLARE @InsertedVisitDetailsID TABLE (VisitDetailsID INT, RequestID INT)
+       --INSERT INTO TBL: VisitDetails
+       INSERT INTO VisitDetails (RequestID, [Date])
+       OUTPUT INSERTED.VisitDetailsID, INSERTED.RequestID INTO @InsertedVisitDetailsID
+       SELECT TempRequestID.RequestID, VisitDate.DateValue  
+       FROM @InsertedRequestID TempRequestID INNER JOIN 
+       (
+             SELECT TBLDates.DateValue, TBLDates.[Day], TBLDates.[Date] FROM 
+             (
+                    SELECT DATEADD(DAY,number,@FromDate) DateValue, SUBSTRING(DATENAME(weekday,DATEADD(DAY,number,@FromDate)), 0, 4) [Day], DAY(DATEADD(DAY,number,@FromDate)) [Date],
+                    CASE WHEN @RecurrencePattern = 'once' OR @RecurrencePattern = 'daily' THEN @RecurrencePattern ELSE NULL END Item
+                    FROM master..spt_values
+                    WHERE type = 'P'
+                    AND DATEADD(DAY,number+1,@FromDate) <= DATEADD(DAY,1,@ToDate)
+             ) TBLDates 
+             LEFT JOIN SplitString(@Occurence, ',') Weekly ON LOWER(TBLDates.[Day]) = LOWER(Weekly.Item) AND @RecurrencePattern = 'weekly'
+             LEFT JOIN SplitString(@Occurence, ',') Monthly ON TBLDates.[Date] = Monthly.Item AND @RecurrencePattern = 'monthly'
+             WHERE 
+             ((@RecurrencePattern = 'once' OR @RecurrencePattern = 'daily' AND TBLDates.Item IS NOT NULL) OR
+             (@RecurrencePattern = 'weekly' AND Weekly.Item IS NOT NULL) OR
+             (@RecurrencePattern = 'monthly' AND Monthly.Item IS NOT NULL) )
+             AND  TBLDates.DateValue >= CONVERT(date, @CreatedDate)
+       ) VisitDate ON 1=1
+       
+       SELECT 1 ReturnStatus, 'Success' ReturnMessage
+       --Returning MasterVisitorID, RequestID
+       SELECT TempRequestID.VisitorID VisitorID, TempRequestID.RequestID RequestID, (VMaster.FirstName + ' ' + VMaster.LastName) Name,VMaster.Company Organization, VMaster.MobileNo MobileNo, RequestTable.Purpose Purpose, VMaster.EmailID EmailID
+       FROM @InsertedRequestID TempRequestID
+       INNER JOIN VisitorMaster VMaster ON TempRequestID.VisitorID = VMaster.VisitorID
+       INNER JOIN VisitorRequest RequestTable ON TempRequestID.VisitorID = RequestTable.VisitorID
+       COMMIT TRANSACTION [MutiRquest]
+
+       END TRY
+       BEGIN CATCH
+             ROLLBACK TRANSACTION [MutiRquest]
+             DECLARE @ErrorMessage varchar(2000) = CONVERT(varchar(2000),OBJECT_NAME(@@PROCID)+':'+ ERROR_MESSAGE() )
+
+             SELECT 0 ReturnStatus, @ErrorMessage ReturnMessage
+             
+       END CATCH
+
+END
