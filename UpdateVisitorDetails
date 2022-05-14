@@ -1,0 +1,30 @@
+CREATE PROCEDURE [dbo].[UpdateVisitorDetails]
+@FirstName varchar(50),
+@Company varchar(50),
+@MobileNo varchar(20),
+@visitorID varchar(50),
+@login varchar(50)
+AS
+BEGIN
+	
+	SET NOCOUNT ON;
+	
+	
+	Update 
+		VisitorMaster 
+	set 
+		FirstName=@FirstName 
+		,Company=@Company 
+		,MobileNo=@MobileNo,
+		[LastUpdatedBy]=@login,
+		[LastUpdateDate]=GETDATE()
+
+	where
+		VisitorID=@VisitorID
+	
+	select [D_MasterVisitorID] from VisitorMaster where VisitorID=@VisitorID
+		
+	SET NOCOUNT OFF;
+
+   
+END
