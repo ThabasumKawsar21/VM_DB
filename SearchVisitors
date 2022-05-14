@@ -1,0 +1,168 @@
+CREATE PROCEDURE [dbo].[SearchVisitors]   
+(  
+ @SearchValue VARCHAR(50) = NULL , 
+ @HostId Varchar(50)=NULL
+)        
+AS      
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+	 DECLARE @NumberRecords int, @RowCount int
+	 DECLARE @Word VARCHAR(100)
+	 DECLARE @SQL varchar(2000) 
+	 DECLARE @Query varchar(1000)
+	 DECLARE @SQL1 varchar(2000)
+	 
+	Declare @Condition varchar(50)
+	CREATE TABLE #SeachEntry (
+		RowID int IDENTITY(1, 1), 
+		SearchWord VARCHAR(100)
+		)
+		
+	CREATE TABLE #TempTable
+	(
+		RowID INT IDENTITY(1, 1), 
+		SearchPrId Int,
+		VisitorID INT,
+		Word Varchar(100),
+		HighPriority Int
+	)	
+		
+	INSERT INTO 
+		#SeachEntry(SearchWord)
+	SELECT 
+		VALUE 
+	FROM dbo.fn_UDF_SplitCharacter(@SearchValue,' ')
+		
+	SET @NumberRecords = @@ROWCOUNT
+	SET @RowCount = 1		  
+	
+	WHILE @RowCount <= @NumberRecords
+		BEGIN
+			SELECT @Word=SearchWord FROM #SeachEntry WHERE RowID = @RowCount    
+		
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.VisitorID,@Word,@RowCount,1
+			FROM VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.FirstName LIKE ''+@Word+'%' 
+			
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.VisitorID,@Word,@RowCount,2
+			FROM VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.LastName LIKE ''+@Word+'%' 
+		
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.VisitorID,@Word,@RowCount,2
+			FROM VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.Company LIKE ''+@Word+'%' 
+		
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.VisitorID,@Word,@RowCount,2
+			FROM VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.MobileNo LIKE '%'+@Word+'%'				
+			
+			SET @RowCount = @RowCount + 1			 
+		END	       
+		
+	CREATE TABLE #TempInterTableResultTotalCount
+	  (
+		RowID INT IDENTITY(1, 1), 
+		VisitorID INT,		
+		TotalCount INT,
+		SearchPrId INT,
+		HighPriority INT
+		
+	   )	  
+	   	   
+	 INSERT INTO #TempInterTableResultTotalCount(VisitorID,TotalCount,SearchPrId,HighPriority)
+	 SELECT  VisitorId,Count(VisitorId)as TotalCount,SearchPrId,HighPriority From #TempTable 
+	 Group By VisitorId ,SearchPrId,HighPriority
+	 
+	 CREATE TABLE #TempInterTableResultRank
+	  (
+		RowID INT IDENTITY(1, 1), 
+		VisitorID INT,		
+		RankCount INT,
+		Word Varchar(100),
+		SearchPrId INT
+	   )	  
+	   
+	 INSERT INTO #TempInterTableResultRank(VisitorID,RankCount,Word,SearchPrId)
+	 SELECT  VisitorId,Count(VisitorId)as RankCount,Word,SearchPrId From #TempTable 
+	 Group By VisitorId ,Word,SearchPrId 
+	
+	SET @SQL1 ='SELECT
+		Distinct a.[VisitorId],
+		a.[FirstName]  + '' '' + a.[LastName] as Name
+		,a.[Company]
+		,a.[Designation]
+	 ,CASE WHEN LEN(a.[MobileNo]) <10 THEN '''' ELSE a.[MobileNo] END AS MobileNo
+	 ,case a.createdby When '''+@HostId+''' Then 1 ELSE 0 END as IsEditable	
+		,COUNT(tr.RankCount) as [Rank],tt.TotalCount,tt.SearchPrId,tt.HighPriority
+	FROM 
+		#TempInterTableResultTotalCount tt JOIN [VisitorMaster] a WITH (NOLOCK) ON tt.VisitorID = a.VisitorID
+		Join #TempInterTableResultRank tr ON tr.VisitorID=a.VisitorID
+	 WHERE ('		 
+			SET @SQL =@SQL1 +'a.IsConfidential = 0)'
+			
+			SET @SQL=@SQL +'GROUP BY	a.[VisitorID]
+		,a.[FirstName]
+		,a.[LastName] 
+		,a.[Company]
+		,a.[Designation]
+		,a.[MobileNo]		
+		,a.CreatedBy,
+		tt.TotalCount,
+		tt.SearchPrId,tt.HighPriority'
+		
+		SET @SQL =@SQL+' UNION '+@SQL1+'  a.IsConfidential = 1 AND a.CreatedBy ='''+@HostId+''' )				
+	GROUP BY	
+		a.[VisitorID]
+		,a.[FirstName]
+		,a.[LastName] 
+		,a.[Company]
+		,a.[Designation]
+		,a.[MobileNo]		
+		,a.CreatedBy,
+		tt.TotalCount,tt.SearchPrId,tt.HighPriority		
+	ORDER BY tt.HighPriority ASC, 
+	tt.SearchPrId ASC,
+	tt.TotalCount DESC,
+	[Rank] DESC'		  
+		   Print @SQL
+		EXEC(@SQL)  
+		-- Drop the temporary table
+		DROP TABLE #TempTable
+		DROP TABLE #SeachEntry    
+		DROP Table #TempInterTableResultTotalCount
+		Drop Table #TempInterTableResultRank
+	
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
