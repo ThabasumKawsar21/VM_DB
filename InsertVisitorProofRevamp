@@ -1,0 +1,14 @@
+CREATE PROCEDURE [dbo].[InsertVisitorProofRevamp]
+(
+	@VisitorID int,
+	@filecontentid varchar(100)
+)
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	insert into [dbo].[MSTR_VisitorProof](MasterVisitorID,Photo,FileContentId) values(@VisitorID,NULL,@filecontentid)
+	
+END
