@@ -1,0 +1,68 @@
+
+CREATE PROCEDURE [dbo].[GetVisitorCardInfoForCheckoutMailProcess] 
+	-- Add the parameters for the stored procedure here
+
+AS
+BEGIN
+	
+	SET NOCOUNT ON;
+	
+ --  ( Select a.HostID, a.Facility,a.Purpose as VisitorType,CONCAT(c.Firstname,' ',c.LastName ) as VisitorName, b.BadgeNo,b.BadgeStatus,b.RequestID,(select (Select Count(k.RequestID) from VisitDetails k where k.RequestID = a.requestid group by k.RequestID) + (Select Count(m.RequestID)   from ReissuedCardDetails m where m.requestid = a.RequestID group by m.RequestID)) as cardCount ,CONCAT(REPLACE(CONVERT(CHAR(10), a.ToDate, 103), '/', '-'),' ' ,CONVERT(VARCHAR(5), a.ToTime, 108)) as ExpectedOutTime,a.LastUpdatedDate as ActualTimeOut from VisitDetails b
+ --  JOIN  VisitorRequest a ON b.RequestID=a.RequestID 
+ --  JOIN  VisitorMaster c on a.VisitorID=c.VisitorID
+ --  where  a.RequestStatus='Out' and   DATEDIFF(minute,a.LastUpdatedDate,GetDate()) between 0 and 15 and BadgeNo is not null 
+   
+	--UNION
+
+	--Select a.HostID, a.Facility,a.Purpose as VisitorType,CONCAT(c.Firstname,' ',c.LastName ) as VisitorName, b.BadgeNo,b.BadgeStatus,b.RequestID,(select (Select Count(k.RequestID) from VisitDetails k where k.RequestID = a.requestid group by k.RequestID) + (Select Count(m.RequestID)   from ReissuedCardDetails m where m.requestid = a.RequestID group by m.RequestID)) as cardCount ,CONCAT(REPLACE(CONVERT(CHAR(10), a.ToDate, 103), '/', '-'),' ' ,CONVERT(VARCHAR(5), a.ToTime, 108)) as ExpectedOutTime,a.LastUpdatedDate as ActualTimeOut from ReissuedCardDetails b  
+	--JOIN  VisitorRequest a ON b.RequestID=a.RequestID 
+ --  JOIN  VisitorMaster c on a.VisitorID=c.VisitorID
+ --  where a.RequestStatus='Out'  and  DATEDIFF(minute,a.LastUpdatedDate,GetDate()) between 0 and 15 and BadgeNo is not null )
+ --  order by HostID
+
+ (
+	--FIRST SELECT IN UNION
+	SELECT	A.HOSTID, 
+			A.FACILITY,
+			A.PURPOSE AS VISITORTYPE,
+			CONCAT(C.FIRSTNAME,' ',C.LASTNAME ) AS VISITORNAME,
+			B.BADGENO,
+			B.BADGESTATUS,
+			B.REQUESTID,
+			(SELECT 
+					ISNULL((SELECT COUNT(K.REQUESTID) FROM VISITDETAILS K WHERE K.REQUESTID = A.REQUESTID GROUP BY K.REQUESTID),0) + 
+					ISNULL((SELECT COUNT(M.REQUESTID)   FROM REISSUEDCARDDETAILS M WHERE M.REQUESTID = A.REQUESTID GROUP BY M.REQUESTID),0)
+			) AS CARDCOUNT,
+			CONCAT(REPLACE(CONVERT(CHAR(10), A.TODATE, 103), '/', '-'),' ' ,CONVERT(VARCHAR(5), A.TOTIME, 108)) AS EXPECTEDOUTTIME,
+			A.LASTUPDATEDDATE AS ACTUALTIMEOUT 
+				FROM VISITDETAILS B
+				JOIN  VISITORREQUEST A ON B.REQUESTID=A.REQUESTID 
+				JOIN  VISITORMASTER C ON A.VISITORID=C.VISITORID
+				WHERE  A.REQUESTSTATUS='OUT' AND   DATEDIFF(MINUTE,A.LASTUPDATEDDATE,GETDATE()) BETWEEN 0 AND 15 AND BADGENO IS NOT NULL 
+   
+UNION
+	--SECOND SELECT IN UNION
+	SELECT	A.HOSTID,
+			A.FACILITY,
+			A.PURPOSE AS VISITORTYPE,
+			CONCAT(C.FIRSTNAME,' ',C.LASTNAME ) AS VISITORNAME,
+			B.BADGENO,
+			B.BADGESTATUS,
+			B.REQUESTID,
+			(SELECT 
+					ISNULL((SELECT COUNT(K.REQUESTID) FROM VISITDETAILS K WHERE K.REQUESTID = A.REQUESTID GROUP BY K.REQUESTID),0) + 
+					ISNULL((SELECT COUNT(M.REQUESTID)   FROM REISSUEDCARDDETAILS M WHERE M.REQUESTID = A.REQUESTID GROUP BY M.REQUESTID),0)
+			) AS CARDCOUNT ,
+			CONCAT(REPLACE(CONVERT(CHAR(10), A.TODATE, 103), '/', '-'),' ' ,CONVERT(VARCHAR(5), A.TOTIME, 108)) AS EXPECTEDOUTTIME,
+			A.LASTUPDATEDDATE AS ACTUALTIMEOUT 
+				FROM REISSUEDCARDDETAILS B  
+				JOIN  VISITORREQUEST A ON B.REQUESTID=A.REQUESTID 
+				JOIN  VISITORMASTER C ON A.VISITORID=C.VISITORID
+				WHERE A.REQUESTSTATUS='OUT'  AND  DATEDIFF(MINUTE,A.LASTUPDATEDDATE,GETDATE()) BETWEEN 0 AND 15 AND BADGENO IS NOT NULL 
+) 
+
+ORDER BY HOSTID
+
+
+
+END
