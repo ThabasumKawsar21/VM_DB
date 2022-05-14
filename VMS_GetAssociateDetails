@@ -1,0 +1,49 @@
+
+CREATE PROCEDURE [dbo].[VMS_GetAssociateDetails]    
+(    
+ @ASSOCIATE_ID Varchar(50)        
+)    
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+
+		SELECT
+			Assoc.Associate_ID as Associate_id
+			,LTRIM(RTRIM(Assoc.Associate_LastName))+','+LTRIM(RTRIM(Assoc.Associate_FirstName)) as AssociateName 
+			,Assoc.EMail_ID    
+			,cont.Value as Mobile 
+			,ISNULL(cont.EXTENSION,'') as Vnet 	
+		
+			FROM [CentralRepository].dbo.vw_CentralRepository_Associate_Details  Assoc WITH (NOLOCK)
+			LEFT JOIN [CentralRepository].[dbo].[vw_CentralRepository_GSMS_AssociateSeatInfo] SeatInfo WITH (NOLOCK) ON Assoc.Associate_ID = SeatInfo.Associate_ID
+			LEFT JOIN [CentralRepository].[dbo].[vw_CentralRepository_Contacts]  cont  WITH (NOLOCK) ON cont.Associate_ID=Assoc.Associate_ID and cont.Pref_phone_flag='Y'
+			
+			WHERE Assoc.Associate_ID = @ASSOCIATE_ID AND Assoc.HR_Status = 'A'
+	
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
