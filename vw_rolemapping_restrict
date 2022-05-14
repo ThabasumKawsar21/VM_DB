@@ -1,0 +1,6 @@
+CREATE VIEW [dbo].[vw_rolemapping_restrict]
+AS 
+--Restriction for access card custodian role (14)
+SELECT RoleMappingID,City, Facility, UserID, RoleID, IsActive, Createdby,CreatedDate, 
+LastUpdatedby, LastUpdatedOn, CountryId,CityId, LocationId
+FROM RoleMapping WHERE RoleID not in (14)
