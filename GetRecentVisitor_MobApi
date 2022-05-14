@@ -1,0 +1,109 @@
+CREATE PROCEDURE GetRecentVisitor_MobApi 
+	-- Add the parameters for the stored procedure here
+	(
+	   @HostId Varchar(50),
+       @Count int
+	)
+AS
+BEGIN
+
+SET NOCOUNT ON 
+
+BEGIN TRY
+BEGIN TRAN
+
+       DECLARE @ErrorMessage VARCHAR(8000);
+       DECLARE @ErrorSeverity INT;
+       DECLARE @ErrorState INT;
+	   --Adding equipment details
+	   	DECLARE @VisitTemp AS TABLE
+	(
+	VisitorFullName	 VARCHAR(50)
+	,VisitorId VARCHAR(50)	
+	,Company	VARCHAR(50)
+	,MobileNo VARCHAR(50)	
+	,VisitorType VARCHAR(50)
+	)
+	DECLARE @EquipTemp AS TABLE
+	(
+	RequestID VARCHAR(50)
+	,VisitorId VARCHAR(50)
+	,MasterVisitorId VARCHAR(50)
+	,VisitDetailsID VARCHAR(50)
+	,VisitorEquipmentID	 VARCHAR(50)	
+	,MasterDataID	VARCHAR(50)
+	,Make VARCHAR(50)	
+	,Model VARCHAR(50)
+	,SerialNo VARCHAR(50)
+	,Others VARCHAR(50)
+	,MasterDataDescription VARCHAR(50)
+	)
+	   
+        INSERT INTO @VisitTemp
+		--end Equipment details
+	   	SELECT Distinct TOP (@Count) vm.FirstName AS VisitorFullName
+       ,vm.MasterVisitorID  AS VisitorId,
+
+       vm.Company,
+       vm.MobileNo,vm.VisitorType
+
+       FROM   dbo.VisitorRequest vr WITH (NOLOCK)
+       INNER JOIN dbo.MSTR_VisitorMaster vm WITH (NOLOCK)                       
+              ON vr.MasterVisitorID = vm.MasterVisitorID 
+
+       WHERE  HostAssociateID = @HostId  AND
+       (ExternalRequestCameFrom is null OR ExternalRequestCameFrom in ('ClientVisit','AMSVisa','Onboarding'))
+       GROUP  BY vm.MasterVisitorID,vm.firstname,vm.CreatedBy,vm.Company,vm.MobileNo,vm.VisitorType,Vr.PermitITEquipments
+
+       ORDER  BY VM.MasterVisitorID DESC
+
+	    --Adding equipment details
+	   	insert into @EquipTemp
+	   SELECT B.RequestID,A.VisitorId,B.MasterVisitorId,C.VisitDetailsID,D.VisitorEquipmentID,
+	    D.MasterDataID	,D.Make, D.Model,	D.SerialNo	,D.Others,E.MasterDataDescription
+	   FROM @VisitTemp AS A
+	   INNER JOIN
+	   (select MasterVisitorId,max(RequestID) RequestID from VisitorRequest GROUP BY MasterVisitorId) B	  
+	   ON A.VisitorId=B.MasterVisitorId 
+	  INNER JOIN 
+	  (
+	  SELECT RequestID,MAX(VisitDetailsID) VisitDetailsID FROM VisitDetails 
+	  GROUP BY RequestID
+	  ) C	  
+	   ON C.RequestID=B.RequestID 	  	
+	INNER JOIN VisitorEquipments AS D
+ ON D.VisitDetailsId=C.VisitDetailsID
+   INNER JOIN 
+ MasterData AS E
+ ON E.MasterDataID = D.MasterDataID
+	   GROUP BY D.MasterDataID,B.RequestID,A.VisitorId,B.MasterVisitorId,C.VisitDetailsID,D.VisitorEquipmentID,D.VisitDetailsID	,
+	    D.MasterDataID	,D.Make, D.Model,	D.SerialNo	,D.Others,E.MasterDataDescription
+
+	
+
+SELECT a.VisitorFUllName,a.VisitorId,a.Company,a.mobileNo,a.visitortype
+,b.VisitDetailsID	,b.VisitorEquipmentID	,b.MasterDataID	,b.Make	,b.Model	,b.SerialNo	,b.Others,b.MasterDataDescription
+from @VisitTemp AS a
+left join
+@EquipTemp AS b
+ON a.visitorId=b.visitorid
+--end Equipment details
+COMMIT TRAN
+END TRY
+BEGIN CATCH
+ROLLBACK TRAN
+       IF (@@ERROR <> 0)
+       BEGIN  
+              SELECT
+              @ErrorMessage =ERROR_MESSAGE(),
+              @ErrorSeverity = ERROR_SEVERITY(),
+              @ErrorState = ERROR_STATE();
+
+              RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+       END
+END CATCH
+RETURN 1 
+
+SET NOCOUNT OFF;     
+
+END
