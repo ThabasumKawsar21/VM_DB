@@ -1,0 +1,26 @@
+CREATE TABLE [dbo].[MSTR_VisitorMaster_Backup](
+[ID] [int] IDENTITY(1,1) NOT NULL,
+	[MasterVisitorID] [int]  NOT NULL,
+	[VisitorReferenceNo] [varchar](50) NULL,
+	[FirstName] [varchar](50) NULL,
+	[LastName] [varchar](50) NULL,
+	[Company] [varchar](50) NULL,
+	[Designation] [varchar](50) NULL,
+	[Country] [varchar](50) NULL,
+	[MobileNo] [varchar](20) NULL,
+	[EmailID] [varchar](50) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+	[LastUpdatedBy] [varchar](50) NULL,
+	[LastUpdateDate] [datetime] NULL,
+	[Gender] [char](2) NULL,
+	[IsConfidential] [bit] NULL,
+	[VisitorType] [varchar](40) NULL,
+	[other] [varchar](50) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 80) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
