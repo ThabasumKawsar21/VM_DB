@@ -1,0 +1,70 @@
+CREATE PROCEDURE GetLocationList_MobApi
+	-- Add the parameters for the stored procedure here
+	(
+	@AssociateId VARCHAR(50)
+	)
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	BEGIN TRY
+	BEGIN TRAN
+	DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+Declare @code as TABLE
+(
+ HCMCode VARCHAR(50)
+)
+
+Declare @Loc as table
+(
+HCMLocationCode varchar(50),
+LocationId varchar(50)
+)
+INSERT INTO @code
+Select c.PresentHCMLocationCode as HCMCode from [CentralRepository].[dbo].[vw_CentralRepository_Associate_Details] as c where Associate_id = @AssociateId
+
+
+insert into @Loc
+select TOP (1) (HCMLocationCode),(LocationId) from tblLocationMapping where HCMLocationCode=(Select HCMCode from @code)
+
+Declare @CCF as table
+(
+CountryCityFacility varchar(50),
+LocationId varchar(50),
+Country varchar(50),
+FacilityCode varchar(50),
+LocationCity varchar(50)
+)
+insert into @CCF
+SELECT distinct a.CountryCityFacility,a.LocationID,b.Country,a.FacilityCode,a.LocationCity  from TblLocationMaster a inner join CountryCode b
+on a.CountryId = b.CountryId 
+ where LocationId = (Select LocationId from @Loc) and  Status='A' order by 1 asc 
+
+
+SELECT distinct b.Country,a.LocationCity,a.FacilityCode,a.CountryCityFacility,a.LocationID  from TblLocationMaster a inner join CountryCode b
+on a.CountryId = b.CountryId 
+and Status='A' order by 1 asc
+
+SELECT CountryCityFacility,LocationId,Country,FacilityCode,LocationCity FROM @CCF
+
+--SELECT CountryCityFacility from TblLocationMaster where Status='A' order by 1 asc
+
+	COMMIT TRAN
+	END TRY
+    
+	BEGIN CATCH
+	ROLLBACK TRAN
+	IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+	END CATCH
+END
