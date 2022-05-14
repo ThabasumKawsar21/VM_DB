@@ -1,0 +1,156 @@
+CREATE PROCEDURE [dbo].[SimilarisitorsCount_Revamp]   
+
+(  
+
+ @SearchValue VARCHAR(50) = NULL , 
+
+ @HostId Varchar(50)=NULL
+
+)        
+
+AS      
+
+BEGIN
+
+SET NOCOUNT ON;
+	 DECLARE @NumberRecords int, @RowCount int
+	 DECLARE @Word VARCHAR(100)
+	 DECLARE @Query varchar(1000)
+
+	 declare @PageNumber INT
+	 declare @PageSize INT
+	 declare @SortColumn VARCHAR(50) 
+	 declare @SortOrder VARCHAR(50) 
+
+	 SET @PageNumber  = 1
+	 SET @PageSize  = 1
+	 SET @SortColumn  = NULL
+	 SET @SortOrder  = NULL 
+
+ 
+	Declare @Condition varchar(50)
+	CREATE TABLE #SeachEntry (
+		RowID int IDENTITY(1, 1), 
+		SearchWord VARCHAR(100)
+		)
+		
+	CREATE TABLE #TempTable
+	(
+		RowID INT IDENTITY(1, 1), 
+		SearchPrId Int,
+		VisitorID INT,
+		Word Varchar(100),
+		HighPriority Int
+	)	
+		
+	INSERT INTO 
+		#SeachEntry(SearchWord)
+	SELECT 
+		VALUE 
+	FROM dbo.fn_UDF_SplitCharacter(@SearchValue,' ')
+		
+	SET @NumberRecords = @@ROWCOUNT
+	SET @RowCount = 1		  
+	
+	WHILE @RowCount <= @NumberRecords
+		BEGIN
+			SELECT @Word=SearchWord FROM #SeachEntry WHERE RowID = @RowCount    
+		
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.MasterVisitorID,@Word,@RowCount,1
+			FROM MSTR_VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.FirstName LIKE ''+@Word+'%' 
+			
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.MasterVisitorID,@Word,@RowCount,2
+			FROM MSTR_VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.LastName LIKE ''+@Word+'%' 
+		
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.MasterVisitorID,@Word,@RowCount,2
+			FROM MSTR_VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.Company LIKE ''+@Word+'%' 
+		
+			INSERT INTO #TempTable(VisitorID,Word,SearchPrId,HighPriority)	
+			SELECT vm.MasterVisitorID,@Word,@RowCount,2
+			FROM MSTR_VisitorMaster vm WITH (NOLOCK)
+			WHERE 1=1 
+			AND vm.MobileNo LIKE '%'+@Word+'%'				
+			
+			SET @RowCount = @RowCount + 1			 
+		END	       
+		
+	CREATE TABLE #TempInterTableResultTotalCount
+	  (
+		RowID INT IDENTITY(1, 1), 
+		VisitorID INT,		
+		TotalCount INT,
+		SearchPrId INT,
+		HighPriority INT
+		
+	   )	  
+	   	   
+	 INSERT INTO #TempInterTableResultTotalCount(VisitorID,TotalCount,SearchPrId,HighPriority)
+	 SELECT  VisitorId,Count(VisitorId)as TotalCount,SearchPrId,HighPriority From #TempTable 
+	 Group By VisitorId ,SearchPrId,HighPriority
+	 
+	 CREATE TABLE #TempInterTableResultRank
+	  (
+		RowID INT IDENTITY(1, 1), 
+		VisitorID INT,		
+		RankCount INT,
+		Word Varchar(100),
+		SearchPrId INT
+	   )	  
+	   
+	 INSERT INTO #TempInterTableResultRank(VisitorID,RankCount,Word,SearchPrId)
+	 SELECT  VisitorId,Count(VisitorId)as RankCount,Word,SearchPrId From #TempTable 
+	 Group By VisitorId ,Word,SearchPrId 
+
+SELECT TCount = COUNT(a.MasterVisitorID) OVER(), COUNT(tr.RankCount) as [Rank]
+	FROM 
+		#TempInterTableResultTotalCount tt JOIN [MSTR_VisitorMaster] a WITH (NOLOCK) ON tt.VisitorID = a.MasterVisitorID
+		Join #TempInterTableResultRank tr ON tr.VisitorID=a.MasterVisitorID
+		join MSTR_VisitorProof VP on VP.MasterVisitorID=a.MasterVisitorID
+	 WHERE a.IsConfidential = 0 OR (a.IsConfidential = 1 AND a.CreatedBy = @HostId)
+		   GROUP BY	 a.MasterVisitorID
+					,a.[FirstName]
+					,a.[LastName] 
+					,a.[Company]
+					,a.[Designation]
+					,a.EmailID
+					,a.[MobileNo]		
+					,a.CreatedBy,
+					tt.TotalCount,
+					tt.SearchPrId,tt.HighPriority,VP.filecontentID
+					ORDER BY 
+				    CASE 
+					WHEN (@SortColumn = 'Name' and @SortOrder = 'ASC' ) THEN a.[FirstName] 
+					WHEN (@SortColumn = 'Company' and @SortOrder = 'ASC' ) THEN a.[Company]
+					WHEN (@SortColumn = 'Designation' and @SortOrder = 'ASC' ) THEN a.[Designation]
+					END ASC,
+
+				    CASE 
+					WHEN (@SortColumn = 'Name' and @SortOrder = 'DESC' ) THEN a.[FirstName] 
+					WHEN (@SortColumn = 'Company' and @SortOrder = 'DESC' ) THEN a.[Company]
+					WHEN (@SortColumn = 'Designation' and @SortOrder = 'DESC' ) THEN a.[Designation]
+					END DESC,
+
+				    tt.HighPriority ASC, 
+					tt.SearchPrId ASC,
+					tt.TotalCount DESC,
+					[Rank] DESC
+
+					OFFSET (@PageNumber-1)*@PageSize ROWS
+					FETCH NEXT @PageSize ROWS ONLY	  
+		
+		-- Drop the temporary table
+		DROP TABLE #TempTable
+		DROP TABLE #SeachEntry    
+		DROP Table #TempInterTableResultTotalCount
+		Drop Table #TempInterTableResultRank
+
+END
