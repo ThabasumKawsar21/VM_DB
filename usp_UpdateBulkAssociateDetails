@@ -1,0 +1,33 @@
+
+CREATE PROCEDURE usp_UpdateBulkAssociateDetails(@Location varchar(50),
+@Purpose varchar(50),
+@fromdate date,
+@todate date,
+@fromtime time,
+@totime time,
+@offset varchar(50),
+@HostID varchar(50),
+@isSMSEnable bit,
+@OutlookNotfication bit,
+@Status varchar(50),
+@isperminete bit,
+@RequestID int,
+@RequestStatus varchar(50),
+@LastUpdatedby varchar(50))
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       update VisitorRequest set RequestedDate=GETDATE(),Facility=@Location,Purpose=@Purpose,
+       HostID=@HostID,FromDate=@fromdate,
+       ToDate=@todate,FromTime=@fromtime,
+       ToTime=@totime,RequestStatus=@RequestStatus,LastUpdatedby=@LastUpdatedby
+       ,LastUpdatedDate=GETDATE(),Status=@Status,
+       PermitITEquipments=@isperminete,ISSMSEnabled=@isSMSEnable
+       ,OutlookNotfication=@OutlookNotfication,Offset=@offset where ParentReferenceId=@RequestID
+END
+GO
