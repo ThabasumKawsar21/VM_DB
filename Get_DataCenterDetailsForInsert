@@ -1,0 +1,40 @@
+CREATE PROCEDURE [dbo].[Get_DataCenterDetailsForInsert] 
+
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	BEGIN TRY
+	BEGIN TRAN
+	DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+SELECT DC.RequestID_VMS,VR.FromDate,VR.ToDate,VR.FromTime,VR.ToTime,VR.Country,Vr.City,Vr.Facility,Vr.Purpose,
+VR.VisitorID,Vr.Createdby,VR.CreatedDate,Vr.RequestStatus,Vr.LastUpdatedDate,DC.TempUnique_Id,
+VM.FirstName,VM.LastName,VM.Gender,VM.Company
+FROM DC_STATUS DC 
+JOIN VisitorRequest VR on VR.RequestID = DC.RequestID_VMS
+JOIN VisitorMaster VM on VM.VisitorID = VR.VisitorID
+where (DC.DCUnique_Id is NULL or DC.DCUnique_Id = 0)  and DC.RequestID_VMS is not null
+
+	COMMIT TRAN
+	END TRY
+
+	BEGIN CATCH
+	ROLLBACK TRAN
+	IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+	END CATCH
+    -- Insert statements for procedure here
+	
+END
+
