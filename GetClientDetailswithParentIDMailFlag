@@ -1,0 +1,42 @@
+-- =============================================    
+CREATE PROCEDURE [dbo].[GetClientDetailswithParentIDMailFlag]    
+ (    
+ @ParentReferenceId int    
+ )     
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+select VR.RequestID,VR.VisitorID,VR.Facility,VR.ParentReferenceId,VR.FromDate,VR.ToDate,CONVERT(VARCHAR, VR.FromTime, 100) AS FromTime,CONVERT(VARCHAR, VR.ToTime, 100) AS ToTime,
+REPLACE(concat(VM.FirstName,' ',VM.lastname),'&',' and ')AS Name,VM.MobileNo,REPLACE(VM.Company,'&',' and ') as Company,VR.HostAssociateID,VR.HostID
+from VisitorRequest VR 
+Join MSTR_Visitormaster VM on VR.MasterVisitorId=VM.MasterVisitorID
+where ParentReferenceId=@ParentReferenceId and VR.BJMailFlag=0 and Purpose='Client'
+order by VR.FromDate,VR.FromTime
+
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
