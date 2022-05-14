@@ -1,0 +1,52 @@
+
+
+CREATE PROCEDURE [dbo].[GetUserRole]
+	(
+	@UserID Varchar(50)	
+	)
+	
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+	
+Declare @UserRole varchar(50)=null
+set @UserRole=null
+IF EXISTS (SELECT 1 FROM vw_rolemapping_restrict WITH (NOLOCK) WHERE UserID=@UserID)
+	BEGIN
+		SELECT LTRIM(RTRIM(Description)) as UserRole from 
+		Roles WITH (NOLOCK) join vw_rolemapping_restrict WITH (NOLOCK) on 
+	Roles.RoleID=vw_rolemapping_restrict.RoleID 
+	WHERE 
+	vw_rolemapping_restrict.UserID=@UserID and vw_rolemapping_restrict.IsActive=1
+	END
+ELSE
+	BEGIN
+		SELECT LTRIM(RTRIM(Description)) as UserRole from Roles WITH (NOLOCK)	WHERE RoleID = 5
+	END
+
+END TRY
+
+BEGIN CATCH
+
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
+
