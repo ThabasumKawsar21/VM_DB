@@ -1,0 +1,16 @@
+CREATE PROCEDURE [dbo].[usp_GetVisitorDetails_VisitorID_new](@VisitorID varchar(50))
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	Declare @purposeRequestVisitorID varchar(50)=(select top 1 Purpose from VisitorRequest where VisitorID=@VisitorID order by CreatedDate desc)
+	Declare @CountryCode varchar(50)=(select top 1 Country from VisitorMaster where VisitorID=@VisitorID order by CreatedDate desc )
+	Declare @countryName varchar(50)=(select Country from CountryCode where CountryId=@CountryCode)
+	select top 1 VM.VisitorID,FirstName,LastName,Gender,Company,Designation,EmailID,@countryName,IsConfidential,
+	@purposeRequestVisitorID,MobileNo from VisitorMaster VM where VM.VisitorID=@VisitorID
+END
+
