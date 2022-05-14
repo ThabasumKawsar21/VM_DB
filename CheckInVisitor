@@ -1,0 +1,146 @@
+-- ===================================================================
+-- Author: Abirami
+-- Create date: 
+-- Modified date: 08-07-2016
+-- Description: 
+-- ===================================================================
+
+CREATE PROCEDURE [dbo].[CheckInVisitor](
+@VisitDetails int,
+@ModifiedBy varchar(50),
+@BadgeIssueddate varchar(50)
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+declare @facility varchar(100)
+declare @City varchar(50)
+declare @countrycityfacility varchar(50)
+declare @facilityForBatch varchar(50)
+declare @ExistingBatchNo varchar(50)=null
+declare @ExistingBatch int 
+declare @AvailableBatch varchar(50)=null
+declare @Month varchar(5)=null
+declare @Year tinyint=null
+declare @Mon varchar(5)=null
+Declare @fac varchar(20) = REPLACE(LTRIM(RTRIM(@facility)), ' ', '')
+
+	--SELECT @AvailableBatch=BadgeNo, @facility=Facility  
+	--FROM VisitDetails vd Join VisitorRequest vr ON vd.RequestID=vr.RequestID 
+	--WHERE VisitDetailsID=@VisitDetails
+	
+	--SELECT TOP 1
+	--@AvailableBatch = b.BadgeNo,
+	--@facility = vr.Facility
+	--FROM 
+	--VisitDetails a JOIN VisitDetails b ON a.RequestID = b.RequestID
+	--JOIN VisitorRequest vr ON a.RequestID=vr.RequestID 
+	--WHERE a.VisitDetailsID=@VisitDetails
+	--AND b.VisitDetailsID <= @VisitDetails
+	--ORDER BY b.VisitDetailsID DESC
+	
+	SELECT @AvailableBatch=MAX(BadgeNo),@facility=lm.LocationId,@City=lm.LocationCity,@countrycityfacility=LM.CountryCityFacility
+FROM VisitDetails vd WITH (NOLOCK) Join VisitorRequest vr WITH (NOLOCK) ON vd.RequestID=vr.RequestID 
+JOIN TblLocationMaster lm WITH (NOLOCK) on (lm.LocationId=vr.LocationId or VR.facility=LM.countrycityfacility)
+WHERE vd.RequestID =(SELECT RequestID FROM VisitDetails WITH (NOLOCK) WHERE VisitDetailsID=@VisitDetails)
+GROUP BY  lm.LocationId,lm.LocationCity,LM.CountryCityFacility
+
+	DECLARE @Today DATETIME
+	DECLARE @FirstDay DATETIME
+	DECLARE @LastDay DATETIME
+	SET @Today =  CONVERT(DATETIME, CONVERT(VARCHAR, GETDATE(), 101)) 
+	SET @FirstDay = DATEADD(dd,-(DAY(@Today)-1),@Today)
+	SET @LastDay = DATEADD(ss , -1,DATEADD(dd,-(DAY(DATEADD(mm,1,@Today))-1),DATEADD(mm,1,@Today)))	
+	
+	IF (@AvailableBatch IS NULL) or (RIGHT(@AvailableBatch,4)='0000')
+		BEGIN
+		
+		SELECT @Year = SUBSTRING(CONVERT(VARCHAR(5),YEAR(@Today)),4,1) 
+		SELECT @Mon = CONVERT(VARCHAR(5),MONTH(@Today))
+		SELECT @Month = CASE LEN(@Mon) WHEN 1 THEN '0'+@Mon ELSE @Mon END
+		
+		SELECT TOP 1 @ExistingBatchNo= LTRIM(RTRIM((RIGHT (vd.BadgeNo,5)))) 
+		FROM VisitDetails vd WITH (NOLOCK) Join VisitorRequest vr WITH (NOLOCK) on vd.RequestID=vr.RequestID 
+		join TblLocationMaster lm WITH (NOLOCK) on (lm.LocationId=vr.LocationId or VR.facility=LM.countrycityfacility)
+		WHERE  (BadgeIssuedDate BETWEEN @FirstDay AND @LastDay)
+		AND (vr.LocationId=@facility  or VR.facility = @countrycityfacility)
+		AND BadgeNo LIKE CONVERT(VARCHAR(1),@Year)+CONVERT(VARCHAR(2),@Month)+'%' 
+		ORDER BY BadgeIssuedDate DESC 
+				
+		--set @onlyMonth=SUBSTRING(@Month,0,4)
+		If (@ExistingBatchNo is null )
+			Begin
+			--set @facilityForBatch=@facilityForBatch+@onlyMonth+'0000'
+			SET @facilityForBatch=CONVERT(VARCHAR(1),@Year)+@Month+'0000'		
+			END
+		ELSE 
+			BEGIN	    
+		  --  set @ExistingBatch=(convert(int,@ExistingBatch))
+			--SET @ExistingBatch=(CAST(@ExistingBatchNo as int))
+			SET @ExistingBatch = (CAST(@ExistingBatchNo as int))+1
+			SET @ExistingBatchNo=CAST(@ExistingBatch as varchar(50))
+			--set @facilityForBatch=@facilityForBatch+@onlyMonth
+			SET @facilityForBatch=CONVERT(VARCHAR(1),@Year)+@Month+(CASE LEN(@ExistingBatchNo) 
+																	WHEN 1 THEN '0000'+@ExistingBatchNo 
+																	WHEN 2 THEN '000'+@ExistingBatchNo
+																	WHEN 3 THEN '00'+@ExistingBatchNo
+																	WHEN 4 THEN '0'+@ExistingBatchNo																	
+																	ELSE @ExistingBatchNo
+																	END)
+			END		
+			UPDATE VisitDetails 
+			SET BadgeNo=@facilityForBatch, BadgeIssuedDate=GETDATE(), BadgeStatus='issued', IssuedBy=@ModifiedBy, LastUpdatedDate=GETDATE() 
+			WHERE VisitDetailsID = @VisitDetails
+			
+			UPDATE VisitorRequest
+			SET RequestStatus='IN', LastUpdatedby=@ModifiedBy, LastUpdatedDate=GETDATE() 
+			WHERE RequestID=(SELECT RequestID FROM VisitDetails WHERE VisitDetailsID = @VisitDetails)
+			
+			SELECT 1 AS IsFirst 
+		END
+	ELSE
+		BEGIN
+			UPDATE VisitDetails 
+			SET BadgeIssuedDate=GETDATE(), BadgeStatus='issued', IssuedBy=@ModifiedBy, LastUpdatedDate=GETDATE() , BadgeNo=@AvailableBatch
+			WHERE VisitDetailsID = @VisitDetails					
+					
+			UPDATE VisitorRequest
+			SET RequestStatus='IN', LastUpdatedby=@ModifiedBy, LastUpdatedDate=GETDATE() 
+			WHERE RequestID=(SELECT RequestID FROM VisitDetails WHERE VisitDetailsID = @VisitDetails)
+			
+			SELECT 0 AS IsFirst 
+		END
+		
+	--SELECT TOP 1 
+	--	vd.BadgeNo AS BadgeNo
+	--	,vr.HostDepartment AS HostDepartment
+	--FROM 
+	--	VisitDetails vd Join VisitorRequest vr ON vd.RequestID=vr.RequestID 
+	--WHERE 
+	--	vd.VisitDetailsID=@VisitDetails		
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
+
