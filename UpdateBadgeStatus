@@ -1,0 +1,48 @@
+CREATE PROCEDURE [dbo].[UpdateBadgeStatus]
+(
+@bdgestatus varchar(100),
+@ActualOutTime datetime,
+@reqstatus varchar(50),
+@VisDetailsID int,
+@comments varchar(500),
+@ModifiedBy varchar(50)
+)
+AS
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+	Declare @OutTime varchar(20);
+	set @OutTime= convert(datetime,getDate(),108); 
+	DECLARE @ReqID INT
+	Declare @Aouttime datetime;	
+	set @Aouttime = CONVERT(datetime,@ActualOutTime,108);
+	set @ReqID = (select top(1) RequestID from VisitDetails WITH (NOLOCK) where VisitDetailsID = @VisDetailsID)
+	Update VisitDetails set BadgeStatus=@bdgestatus, ActualOutTime=getdate() where VisitDetailsID=@VisDetailsID
+	Update VisitorRequest set RequestStatus=@reqstatus, LastUpdatedby=@ModifiedBy, LastUpdatedDate=GETDATE() where RequestID=@ReqID 
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
+
+
