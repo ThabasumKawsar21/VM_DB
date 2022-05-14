@@ -1,0 +1,16 @@
+
+CREATE PROCEDURE [dbo].[GetVisitorCardInfoForCheck_inMailProcess] 
+	-- Add the parameters for the stored procedure here
+	
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	SELECT a.HostID, a.Facility,a.Purpose as VisitorType,CONCAT(c.Firstname,' ',c.LastName ) as VisitorName,b.BadgeNo ,b.RequestID, b.BadgeIssuedDate from VisitDetails b JOIN  VisitorRequest a ON b.RequestID=a.RequestID
+	JOIN VisitorMaster c on a.VisitorID=c.VisitorID
+	 where b.BadgeStatus='issued' and  DATEDIFF(minute,BadgeIssuedDate,GetDate()) between 0 and 15 and BadgeNo is not null order by a.HostID
+END
