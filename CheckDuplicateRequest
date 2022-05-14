@@ -1,0 +1,30 @@
+-- =============================================
+-- Author:		Thabasum Kawsar
+-- Create date: 18/08/2020
+-- Description:	To check the Duplicate Request
+-- =============================================
+CREATE PROCEDURE [dbo].[CheckDuplicateRequest]
+(@VisitorType varchar(100),
+@LocationName varchar(50),
+@Date varchar(5000),
+@StartTime varchar(50),
+@ToTime varchar(50),
+@MasterVisitorID int )
+
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+              Declare @Count int=(select Count(1) from VisitorRequest where Purpose=@VisitorType and Facility=@LocationName and FromDate like '%'+@Date+'%' and FromTime=@StartTime and ToTime=@ToTime  and MasterVisitorId=@MasterVisitorID )
+              if(@Count=0 OR @Count is null)
+       begin
+              select 0 as CartID
+       end
+              else
+              begin
+              select 1 as CartID
+              end 
+END
