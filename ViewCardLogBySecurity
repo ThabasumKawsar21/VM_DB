@@ -1,0 +1,127 @@
+CREATE PROCEDURE [dbo].[ViewCardLogBySecurity]
+(
+	@AssociateID Varchar(11) =null,
+	@SearchValue Varchar(200)=null,
+	@ReqStatus Varchar(50)=NULL
+	)
+AS
+BEGIN
+SET NOCOUNT ON
+CREATE TABLE #TempTable
+	(
+		RowID int IDENTITY(1, 1), 
+		VisitDetailsID Int	
+	)	
+ CREATE TABLE #SeachEntry 
+	(
+		RowID int IDENTITY(1, 1), 
+		SearchWord VARCHAR(100)
+	)	
+INSERT INTO #SeachEntry(SearchWord) SELECT value FROM dbo.fn_UDF_SplitCharacter(@SearchValue,' ')
+
+	 DECLARE @NumberRecords int, @RowCount int
+	 DECLARE @Word VARCHAR(100)
+	 DECLARE @Query varchar(1000)	
+	 Declare @LocationId Int
+	 DECLARE @Code varchar(100)
+	 DECLARE @countrycode int
+	 SET @NumberRecords = @@ROWCOUNT
+	 SET @RowCount = 1	
+	/*
+	Modifided : Get Facility and City from LocationMaster
+	*/
+	SELECT @LocationId=RM.LocationId,@Code=LM.CountryCityFacility,@countrycode = LM.CountryId
+	FROM [vw_rolemapping_restrict] RM WITH (NOLOCK) Inner Join TblLocationMaster LM WITH (NOLOCK) 
+	ON RM.LocationId=LM.LocationId
+	WHERE UserID = @AssociateID
+		
+ IF @ReqStatus = 'IN'
+				BEGIN						
+					INSERT INTO #TempTable(VisitDetailsID)	
+					SELECT vd.VisitDetailsID 
+					FROM VisitDetails vd WITH (NOLOCK) 
+						JOIN VisitorRequest vr WITH (NOLOCK) ON vd.RequestID = vr.RequestID
+						JOIN VisitorMaster vm WITH (NOLOCK) ON vr.VisitorID = vm.VisitorID
+					WHERE 1=1 						  
+						AND Vr.[Status] in ('Submitted','updated')	
+						AND (vr.LocationId = @LocationId	or VR.Facility=@Code)
+						AND vd.BadgeStatus ='Issued'
+						AND vd.BadgeNo LIKE  @SearchValue
+					    and (vr.ExternalRequestCameFrom is null OR vr.ExternalRequestCameFrom in ('AMSVisa'))
+                       and VR.purpose not in ('Client')
+				END
+
+
+	SELECT 
+			TT.VisitDetailsID as DetailsID
+			,COUNT(TT.VisitDetailsID) as Cnt
+			,Vr.VisitorID
+			,Vr.RequestID
+			,Vd.date
+			,Vd.VisitDetailsID as VisitDetailsID
+			,RequestStatus 
+			,FirstName as Name 
+			,Company 
+			,(SELECT VALUE FROM dbo.fn_UDF_SplitCharacter(Vm.MobileNo,'-') WHERE  idx=1)AS MobileNo
+			,FromDate
+			,ToDate
+			,Designation
+			,Vm.Country as NativeCountry
+			,ISNULL(Vm.EmailID,'') as EmailID
+			,Replace(Purpose,'Select Purpose','') as Purpose
+			,Replace(LM.LocationCity,'Select','') as VisitingCity
+			,HostID as Host
+			,FromTime as inTime
+			,ToTime as ExpectedOutTime
+			,CONVERT(VARCHAR(8),VD.BadgeIssuedDate,108) as ActualInTime
+			,Vd.ActualOutTime
+			,Vd.BadgeNo
+			,VisitorReferenceNo
+			,dbo.fn_UDF_InitialCaps(Vd.BadgeStatus) as BadgeStatus		 
+			,LM.LocationName as Facility
+			,Vr.Comments
+			,Vr.HostDepartment
+			,Vr.Offset 
+		 FROM #TempTable TT 
+			JOIN VisitDetails Vd WITH (NOLOCK) on TT.VisitDetailsID =Vd.VisitDetailsID 
+			JOIN VisitorRequest Vr WITH (NOLOCK) ON Vd.RequestID = Vr.RequestID
+			JOIN VisitorMaster Vm  WITH (NOLOCK) ON Vr.VisitorID= Vm.VisitorID
+			Join TblLocationMaster LM WITH (NOLOCK) On LM.LocationId=Vr.LocationId or LM.CountryCityFacility=VR.Facility
+		GROUP BY 
+			TT.VisitDetailsID 
+			,Vr.VisitorID
+			,Vr.RequestID
+			,Vd.[Date]
+			,Vd.VisitDetailsID
+			,RequestStatus
+			,FirstName ,LastName
+			,Company
+			,Vm.MobileNo
+			,FromDate
+			,ToDate
+			,Designation
+			,Vm.Country 
+			,Vm.EmailID
+			,Purpose
+			,LM.LocationCity
+			,HostID
+			,FromTime 
+			,ToTime 
+			,Vd.ActualOutTime
+			,VD.BadgeIssuedDate
+			,Vd.BadgeNo
+			,VisitorReferenceNo
+			,Vd.BadgeStatus
+			,LM.LocationName
+			,Vr.Comments
+			,Vr.HostDepartment 
+			,Vr.Offset 
+		ORDER BY 
+			FromDate Desc 
+			,FromTime Desc 
+
+
+DROP TABLE #SeachEntry
+DROP TABLE #TempTable
+END
+
