@@ -1,0 +1,7 @@
+CREATE TABLE [dbo].[ExternalServiceHistory] (
+    [TrackId]         INT          IDENTITY (1, 1) NOT NULL,
+    [TrackMessage]    VARCHAR (8000) NULL,
+    [ExternalRefId]   INT           NULL,
+    [LastUpdatedDate] DATETIME      NULL
+    CONSTRAINT [PK_ExternalServiceHistory] PRIMARY KEY ([TrackId]) 
+);
