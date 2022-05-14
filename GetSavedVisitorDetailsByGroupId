@@ -1,0 +1,47 @@
+CREATE PROCEDURE [dbo].[GetSavedVisitorDetailsByGroupId]    
+ (    
+ @GroupID INT,
+ @HostID Varchar(11)    
+ )     
+AS    
+BEGIN
+SET NOCOUNT ON 
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+BEGIN TRY
+BEGIN TRAN
+DECLARE @ErrorMessage VARCHAR(8000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+
+DECLARE @VisitorIds VARCHAR(100);
+
+SET @VisitorIds = (SELECT TOP 1 (STUFF((SELECT ', ' + [SelectedVisitors]
+               FROM [VisitorSavedLocationRequest] b 
+               WHERE b.GroupId = a.GroupId AND HostID = @HostID
+                FOR XML PATH('')), 1, 2,'')) AS [VisitorIDs] 
+		        --,a.GroupId AS GroupId
+		        FROM [VisitorSavedLocationRequest] a
+				WHERE a.GroupId = @GroupID
+                 ) 
+
+ SELECT DISTINCT  CAST(Item AS INT) AS VisitorID FROM [dbo].[SplitString](@VisitorIds,',')
+
+COMMIT TRAN
+END TRY
+
+BEGIN CATCH
+ROLLBACK TRAN
+IF (@@ERROR <> 0)
+BEGIN	
+SELECT
+@ErrorMessage =ERROR_MESSAGE(),
+@ErrorSeverity = ERROR_SEVERITY(),
+@ErrorState = ERROR_STATE();
+RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState)
+END
+END CATCH	
+
+RETURN 1 
+SET NOCOUNT OFF;	
+END
