@@ -1,0 +1,22 @@
+CREATE PROCEDURE [dbo].[usp_InserVisitorMaster](@Name varchar(100),
+@Company varchar(100),
+@Country varchar(100),
+@MobileNo varchar(100),
+@CreatedBy varchar(10),
+@IsConfidance varchar(10),
+@MasterParentID varchar(10),
+@Others varchar(50),
+@EmailID varchar(50))
+       -- Add the parameters for the stored procedure here
+       
+AS
+BEGIN
+       -- SET NOCOUNT ON added to prevent extra result sets from
+       -- interfering with SELECT statements.
+       SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+       insert into [VisitorMaster]([FirstName],[Company],[Country],[MobileNo],[CreatedBy],[CreatedDate],[IsConfidential],D_MasterVisitorID,Others,EmailID)
+values(@Name,@Company,@Country,@MobileNo,@CreatedBy,GETDATE(),@IsConfidance,@MasterParentID,@Others,@EmailID)
+       Select SCOPE_IDENTITY() as VisitorID
+END
