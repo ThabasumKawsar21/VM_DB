@@ -1,0 +1,5 @@
+CREATE TABLE [dbo].[BSTimeZoneMaster]
+(
+	[TimeZoneID] INT NOT NULL PRIMARY KEY, 
+    [TimeZone] VARCHAR(100) NULL
+)
